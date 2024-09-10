@@ -3,6 +3,14 @@ import re
 from datetime import datetime
 import json
 from ics import Calendar, Event
+from tkinter import Tk
+from tkinter.filedialog import askopenfilename
+
+# Function to open a file dialog and get the PDF path
+def get_pdf_file():
+    Tk().withdraw()  # Close the root window
+    filename = askopenfilename(filetypes=[("PDF files", "*.pdf")])
+    return filename
 
 # Function to clean and normalize text
 def clean_text(text):
@@ -59,7 +67,7 @@ def extract_events_from_pdf(pdf_path):
 
                 # Check for event (time and group)
                 time_match = re.findall(r'(\d{1,2}:\d{2}\s*(?:am|pm)\s*–\s*\d{1,2}:\d{2}\s*(?:am|pm))', line)
-                group_match = re.search(r':\s*([A-Z]{1,3}[0-9]{0,2}(?:\s*/\s*[A-Z]{1,3}[0-9]{0,2})?)', line)
+                group_match = re.search(r':\s*([A-Z]{1,3}[0-2](?:\s*/\s*[A-Z]{1,3}[0-2])?)', line)
 
                 if time_match and group_match and current_date and current_location:
                     start_time, end_time = normalize_time(time_match[0])
@@ -93,13 +101,16 @@ def generate_ics(events, output_file='practice_schedule.ics'):
     print(f"ICS file created at {output_file}")
 
 # Main script execution
-pdf_file_path = 'path_to_your_pdf.pdf'  # Replace with your PDF file path
-events = extract_events_from_pdf(pdf_file_path)
+pdf_file_path = get_pdf_file()
+if pdf_file_path:
+    events = extract_events_from_pdf(pdf_file_path)
 
-# Output events to JSON (optional)
-with open('practice_schedule.json', 'w') as json_file:
-    json.dump(events, json_file, indent=4)
-print("Events saved to practice_schedule.json")
+    # Output events to JSON (optional)
+    with open('practice_schedule.json', 'w') as json_file:
+        json.dump(events, json_file, indent=4)
+    print("Events saved to practice_schedule.json")
 
-# Generate ICS file
-generate_ics(events)
+    # Generate ICS file
+    generate_ics(events)
+else:
+    print("No PDF file selected.")

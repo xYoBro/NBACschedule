@@ -1,1 +1,289 @@
-[]
+[
+    {
+        "date": "2024-09-09",
+        "location": "GILMAN",
+        "group": "P2",
+        "start_time": "18:00",
+        "end_time": "19:45"
+    },
+    {
+        "date": "2024-09-09",
+        "location": "GOUCHER",
+        "group": "IM2",
+        "start_time": "17:45",
+        "end_time": "19:15"
+    },
+    {
+        "date": "2024-09-09",
+        "location": "GOUCHER",
+        "group": "HP1",
+        "start_time": "16:30",
+        "end_time": "18:15"
+    },
+    {
+        "date": "2024-09-09",
+        "location": "GOUCHER",
+        "group": "P1",
+        "start_time": "16:30",
+        "end_time": "18:15"
+    },
+    {
+        "date": "2024-09-09",
+        "location": "GOUCHER",
+        "group": "CH2",
+        "start_time": "18:15",
+        "end_time": "20:00"
+    },
+    {
+        "date": "2024-09-09",
+        "location": "GOUCHER",
+        "group": "CH1",
+        "start_time": "18:15",
+        "end_time": "20:00"
+    },
+    {
+        "date": "2024-09-09",
+        "location": "GOUCHER",
+        "group": "IM1",
+        "start_time": "19:30",
+        "end_time": "21:00"
+    },
+    {
+        "date": "2024-09-10",
+        "location": "GOUCHER",
+        "group": "D1",
+        "start_time": "17:30",
+        "end_time": "18:30"
+    },
+    {
+        "date": "2024-09-10",
+        "location": "GOUCHER",
+        "group": "D2",
+        "start_time": "17:45",
+        "end_time": "18:45"
+    },
+    {
+        "date": "2024-09-10",
+        "location": "GOUCHER",
+        "group": "IM2",
+        "start_time": "18:45",
+        "end_time": "20:15"
+    },
+    {
+        "date": "2024-09-10",
+        "location": "GOUCHER",
+        "group": "HP1",
+        "start_time": "16:00",
+        "end_time": "17:45"
+    },
+    {
+        "date": "2024-09-10",
+        "location": "GOUCHER",
+        "group": "P1",
+        "start_time": "16:00",
+        "end_time": "17:45"
+    },
+    {
+        "date": "2024-09-10",
+        "location": "GOUCHER",
+        "group": "CH2",
+        "start_time": "17:45",
+        "end_time": "19:30"
+    },
+    {
+        "date": "2024-09-10",
+        "location": "GOUCHER",
+        "group": "CH1",
+        "start_time": "19:15",
+        "end_time": "21:00"
+    },
+    {
+        "date": "2024-09-10",
+        "location": "GOUCHER",
+        "group": "IM1",
+        "start_time": "19:30",
+        "end_time": "21:00"
+    },
+    {
+        "date": "2024-09-11",
+        "location": "GILMAN",
+        "group": "P2",
+        "start_time": "18:00",
+        "end_time": "19:45"
+    },
+    {
+        "date": "2024-09-11",
+        "location": "GOUCHER",
+        "group": "IM2",
+        "start_time": "17:45",
+        "end_time": "19:15"
+    },
+    {
+        "date": "2024-09-11",
+        "location": "GOUCHER",
+        "group": "HP1",
+        "start_time": "16:30",
+        "end_time": "18:15"
+    },
+    {
+        "date": "2024-09-11",
+        "location": "GOUCHER",
+        "group": "P1",
+        "start_time": "16:30",
+        "end_time": "18:15"
+    },
+    {
+        "date": "2024-09-11",
+        "location": "GOUCHER",
+        "group": "IM1",
+        "start_time": "18:15",
+        "end_time": "19:45"
+    },
+    {
+        "date": "2024-09-12",
+        "location": "GILMAN",
+        "group": "P2",
+        "start_time": "18:00",
+        "end_time": "19:45"
+    },
+    {
+        "date": "2024-09-12",
+        "location": "GOUCHER",
+        "group": "D1",
+        "start_time": "17:30",
+        "end_time": "18:30"
+    },
+    {
+        "date": "2024-09-12",
+        "location": "GOUCHER",
+        "group": "D2",
+        "start_time": "17:45",
+        "end_time": "18:45"
+    },
+    {
+        "date": "2024-09-12",
+        "location": "GOUCHER",
+        "group": "HP1",
+        "start_time": "16:00",
+        "end_time": "17:45"
+    },
+    {
+        "date": "2024-09-12",
+        "location": "GOUCHER",
+        "group": "P1",
+        "start_time": "16:00",
+        "end_time": "17:45"
+    },
+    {
+        "date": "2024-09-12",
+        "location": "GOUCHER",
+        "group": "CH2",
+        "start_time": "17:45",
+        "end_time": "19:30"
+    },
+    {
+        "date": "2024-09-12",
+        "location": "GOUCHER",
+        "group": "CH1",
+        "start_time": "19:15",
+        "end_time": "21:00"
+    },
+    {
+        "date": "2024-09-12",
+        "location": "GOUCHER",
+        "group": "IM1",
+        "start_time": "19:30",
+        "end_time": "21:00"
+    },
+    {
+        "date": "2024-09-13",
+        "location": "GILMAN",
+        "group": "P2",
+        "start_time": "18:00",
+        "end_time": "19:30"
+    },
+    {
+        "date": "2024-09-13",
+        "location": "GOUCHER",
+        "group": "IM2",
+        "start_time": "17:45",
+        "end_time": "19:15"
+    },
+    {
+        "date": "2024-09-13",
+        "location": "GOUCHER",
+        "group": "HP1",
+        "start_time": "16:00",
+        "end_time": "17:45"
+    },
+    {
+        "date": "2024-09-13",
+        "location": "GOUCHER",
+        "group": "CH2",
+        "start_time": "17:45",
+        "end_time": "19:30"
+    },
+    {
+        "date": "2024-09-13",
+        "location": "GOUCHER",
+        "group": "P1",
+        "start_time": "18:00",
+        "end_time": "19:30"
+    },
+    {
+        "date": "2024-09-13",
+        "location": "GOUCHER",
+        "group": "IM1",
+        "start_time": "19:30",
+        "end_time": "21:00"
+    },
+    {
+        "date": "2024-09-13",
+        "location": "GOUCHER",
+        "group": "CH1",
+        "start_time": "19:30",
+        "end_time": "21:00"
+    },
+    {
+        "date": "2024-09-15",
+        "location": "GILMAN",
+        "group": "P2",
+        "start_time": "09:15",
+        "end_time": "11:15"
+    },
+    {
+        "date": "2024-09-15",
+        "location": "GOUCHER COLLEGE",
+        "group": "CH2",
+        "start_time": "07:30",
+        "end_time": "09:15"
+    },
+    {
+        "date": "2024-09-15",
+        "location": "GOUCHER COLLEGE",
+        "group": "CH1",
+        "start_time": "07:30",
+        "end_time": "09:15"
+    },
+    {
+        "date": "2024-09-15",
+        "location": "GOUCHER COLLEGE",
+        "group": "IM1",
+        "start_time": "09:15",
+        "end_time": "10:45"
+    },
+    {
+        "date": "2024-09-15",
+        "location": "GOUCHER COLLEGE",
+        "group": "HP1",
+        "start_time": "09:15",
+        "end_time": "11:00"
+    },
+    {
+        "date": "2024-09-15",
+        "location": "GOUCHER COLLEGE",
+        "group": "P1",
+        "start_time": "09:15",
+        "end_time": "11:00"
+    }
+]
