@@ -3,13 +3,12 @@ import re
 from datetime import datetime
 import json
 from ics import Calendar, Event
-from tkinter import Tk
-from tkinter.filedialog import askopenfilename
+from tkinter import Tk, Label, Radiobutton, Button, StringVar, filedialog
 
 # Function to open a file dialog and get the PDF path
 def get_pdf_file():
     Tk().withdraw()  # Close the root window
-    filename = askopenfilename(filetypes=[("PDF files", "*.pdf")])
+    filename = filedialog.askopenfilename(filetypes=[("PDF files", "*.pdf")])
     return filename
 
 # Function to clean and normalize text
@@ -41,7 +40,7 @@ def normalize_time(time_str):
         return None, None
 
 # Function to extract events from the PDF using pdfplumber
-def extract_events_from_pdf(pdf_path):
+def extract_events_from_pdf(pdf_path, selected_group):
     events = []
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
@@ -73,7 +72,8 @@ def extract_events_from_pdf(pdf_path):
                     start_time, end_time = normalize_time(time_match[0])
                     group = group_match.group(1).strip()
 
-                    if start_time and end_time:
+                    # Only include the events for the selected group
+                    if start_time and end_time and group == selected_group:
                         event = {
                             "date": current_date,
                             "location": current_location,
@@ -100,17 +100,42 @@ def generate_ics(events, output_file='practice_schedule.ics'):
         ics_file.writelines(cal)
     print(f"ICS file created at {output_file}")
 
-# Main script execution
-pdf_file_path = get_pdf_file()
-if pdf_file_path:
-    events = extract_events_from_pdf(pdf_file_path)
+# Function to create the group selection popup
+def select_group():
+    def submit_selection():
+        selected_value = group_var.get()
+        root.destroy()  # Close the popup after selection
+        run_script_with_selection(selected_value)
 
-    # Output events to JSON (optional)
-    with open('practice_schedule.json', 'w') as json_file:
-        json.dump(events, json_file, indent=4)
-    print("Events saved to practice_schedule.json")
+    root = Tk()
+    root.title("Select Group")
 
-    # Generate ICS file
-    generate_ics(events)
-else:
-    print("No PDF file selected.")
+    group_var = StringVar(value="CH2")  # Default to CH2
+
+    Label(root, text="Select Group for Event Extraction").pack(pady=10)
+
+    Radiobutton(root, text="CH2", variable=group_var, value="CH2").pack(anchor="w")
+    Radiobutton(root, text="CH4", variable=group_var, value="CH4").pack(anchor="w")
+
+    Button(root, text="Submit", command=submit_selection).pack(pady=10)
+
+    root.mainloop()
+
+# Function to run the main script with the selected group
+def run_script_with_selection(selected_group):
+    pdf_file_path = get_pdf_file()
+    if pdf_file_path:
+        events = extract_events_from_pdf(pdf_file_path, selected_group)
+
+        # Output events to JSON (optional)
+        with open('practice_schedule.json', 'w') as json_file:
+            json.dump(events, json_file, indent=4)
+        print("Events saved to practice_schedule.json")
+
+        # Generate ICS file
+        generate_ics(events)
+    else:
+        print("No PDF file selected.")
+
+# Start the script with the group selection popup
+select_group()
