@@ -1,16 +1,31 @@
 import re
 from datetime import datetime
 import json
-from fuzzywuzzy import fuzz
+from rapidfuzz import fuzz, process  # Use rapidfuzz for fuzzy matching
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
 import PyPDF2
 
-# Regex patterns to match different components
+# Updated regex patterns
 date_pattern = r'([A-Z]+\s+[A-Z]+\s+\d{1,2}\s*,\s*\d{4})'
 time_pattern = r'(\d{1,2}:\d{2}\s*(?:am|pm)\s*–\s*\d{1,2}:\d{2}\s*(?:am|pm))'
-location_pattern = r'@ ([A-Z ]+)'
-group_pattern = r':\s*([A-Z]{1,3}[0-9]?)'  # Improved pattern to match groups like "P2", "CH3", "D3", etc.
+location_pattern = r'@ ([A-Za-z \–]+)'  # Handles spaces and special characters like en-dash
+group_pattern = r':\s*([A-Z]{1,3}[0-9]{0,2}(?:\s*/\s*[A-Z]{1,3}[0-9]{0,2})?)'  # Improved group detection
+
+# Define possible locations and groups to allow for fuzzy matching
+known_locations = ["GILMAN", "GOUCHER", "LOYOLA UNIVERSITY", "COPPERMINE – BEL AIR"]
+known_groups = ["P2", "CH3", "D3", "IM3", "HP1", "P1", "CH1", "CHA", "IMB", "IMA"]
+
+# Function to clean and normalize text for fuzzy matching
+def clean_text(text):
+    return re.sub(r'\s+', ' ', text.strip())
+
+# Function to perform fuzzy matching for location or group
+def fuzzy_match(query, choices, threshold=80):
+    best_match = process.extractOne(query, choices, scorer=fuzz.token_set_ratio)
+    if best_match and best_match[1] >= threshold:
+        return best_match[0]
+    return None
 
 # Function to open a file dialog and get the PDF path
 def get_pdf_file():
@@ -53,10 +68,11 @@ def extract_events(text):
     current_date = None
     current_location = None
 
-    lines = text.split("\n")
+    # Split by double newline to avoid breaking event details across lines
+    lines = text.split("\n\n")
 
     for line in lines:
-        line = line.strip()
+        line = clean_text(line)  # Clean the line from extra spaces and formatting errors
 
         # Check for date
         date_match = re.search(date_pattern, line)
@@ -64,21 +80,23 @@ def extract_events(text):
             current_date = normalize_date(date_match.group(0))
             continue
 
-        # Check for location
+        # Check for location and apply fuzzy matching
         location_match = re.search(location_pattern, line)
         if location_match:
-            current_location = location_match.group(1).strip()
+            location_raw = clean_text(location_match.group(1))
+            current_location = fuzzy_match(location_raw, known_locations)
             continue
 
-        # Check for event (time and group)
+        # Check for event (time and group) and apply fuzzy matching for groups
         time_match = re.findall(time_pattern, line)
         group_match = re.search(group_pattern, line)
 
         if time_match and group_match and current_date and current_location:
             start_time, end_time = normalize_time(time_match[0])
-            group = group_match.group(1).strip()
+            group_raw = clean_text(group_match.group(1))
+            group = fuzzy_match(group_raw, known_groups)
 
-            if start_time and end_time:
+            if start_time and end_time and group:
                 event = {
                     "date": current_date,
                     "location": current_location,
