@@ -1,10 +1,19 @@
 import PyPDF2
-import csv
 import re
+import json
 from ics import Calendar, Event
+from datetime import datetime
+from fuzzywuzzy import process
+from spellchecker import SpellChecker
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
-from datetime import datetime
+
+# List of known groups and locations for fuzzy matching and validation
+KNOWN_GROUPS = ["CH2", "CH3", "IM2", "IM3", "P1", "P2", "D1", "D2", "CHA", "IMB", "HP1", "HP2"]
+KNOWN_LOCATIONS = ["GILMAN", "GOUCHER", "LOYOLA UNIVERSITY", "COPPERMINE – BEL AIR"]
+
+# Set up a spell checker for detecting common mistakes
+spell = SpellChecker()
 
 # Hide the root Tkinter window
 Tk().withdraw()
@@ -24,92 +33,130 @@ with open(pdf_path, 'rb') as file:
     for page in range(len(reader.pages)):
         text += reader.pages[page].extract_text()
 
-# Extracting individual entries for practices using regex
+# Print the extracted text to check its structure
+print("Extracted text from PDF:")
+print(text)
+
+# Example regular expression matching practice schedule entries
 schedule_entries = re.findall(r'([A-Z]+DAY.*?)(?=[A-Z]+DAY|$)', text, re.DOTALL)
 
-# Initialize CSV data with headers
-csv_data = [['Title', 'Date', 'Start Time', 'End Time', 'Location']]
+# Initialize JSON data
+json_data = []
 
 # Function to convert 12-hour time format to 24-hour format
 def convert_time(time_str):
-    match = re.match(r'(\d+):(\d+)\s*([APM]+)', time_str)
+    # Normalize time format, handle missing AM/PM and spacing issues
+    match = re.match(r'(\d{1,2}):(\d{2})\s*([APM]+)?', time_str.strip())
     if match:
         hour, minute, period = int(match.group(1)), match.group(2), match.group(3)
-        if period == 'PM' and hour != 12:
+        if period and period.upper() == 'PM' and hour != 12:
             hour += 12
-        elif period == 'AM' and hour == 12:
+        elif period and period.upper() == 'AM' and hour == 12:
             hour = 0
         return f'{hour:02}:{minute}'
     return time_str
 
-# Parse each entry and extract only CH2 events
+# Function to clean and normalize date strings by removing extra spaces and handling common issues
+def normalize_date(date_str):
+    # Remove extra spaces, fix common issues like misplaced spaces in the date
+    date_str = re.sub(r'\s+', ' ', date_str).strip()  # Remove extra spaces
+    date_str = re.sub(r'(\d{1,2})\s(\d{1,2}),', r'\1\2,', date_str)  # Fix spaces in day number (e.g., "1 5" -> "15")
+    date_str = re.sub(r'([A-Za-z]+)\s+(\d{1,2})\s*,\s*(\d{4})', r'\1 \2, \3', date_str)  # Fix misplaced spaces
+    date_str = date_str.title()  # Ensure capitalization is consistent (e.g., "September")
+    
+    try:
+        return datetime.strptime(date_str, '%A %B %d, %Y')
+    except ValueError:
+        # Attempt a fallback fix if there are still issues
+        corrected_date_str = re.sub(r'(\w+day)\s+', r'\1 ', date_str)  # Fix potential spacing issues in the day of the week
+        try:
+            return datetime.strptime(corrected_date_str, '%A %B %d, %Y')
+        except ValueError:
+            print(f"Unable to correct the date string: {date_str}")
+            return None  # Return None for logging or manual correction
+
+# Function to normalize group names using fuzzy matching
+def normalize_group(group_str):
+    group_str = group_str.strip()
+    # Use fuzzy matching to correct group names
+    best_match = process.extractOne(group_str, KNOWN_GROUPS)
+    return best_match[0] if best_match else group_str
+
+# Function to normalize location names using fuzzy matching
+def normalize_location(location_str):
+    location_str = location_str.strip()
+    best_match = process.extractOne(location_str, KNOWN_LOCATIONS)
+    return best_match[0] if best_match else location_str
+
+# Parse each schedule entry and convert to JSON structure
 for entry in schedule_entries:
     lines = entry.split('\n')
-    current_date = lines[0].strip()  # The first line contains the day and date
-    location = None
+    current_date = normalize_date(lines[0].strip())  # First line contains the date
+    if current_date is None:
+        print(f"Skipping unparseable date: {lines[0].strip()}")
+        continue  # Skip unparseable dates
     
+    location = None
+
     for line in lines[1:]:
         line = line.strip()
+
         if '@' in line:
-            location = line.split('@')[1].strip()  # Update location when found
+            location = normalize_location(line.split('@')[1].strip())  # Get the location and normalize
         elif re.match(r'\d{1,2}:\d{2}\s?[APM]+', line):  # Matches time lines
-            # Extract start/end times and group information
-            if 'CH2' in line:  # Only include CH2 events
-                time_match = re.findall(r'(\d{1,2}:\d{2}\s?[APM]+)', line)
-                group_match = re.findall(r'[A-Z0-9]+', line)
-                if len(time_match) == 2 and location:
-                    start_time = convert_time(time_match[0])
-                    end_time = convert_time(time_match[1])
-                    title = f"Practice CH2 at {location}"
-                    
-                    # Format the data for CSV
-                    csv_data.append([title, current_date, start_time, end_time, location])
+            time_match = re.findall(r'(\d{1,2}:\d{2}\s?[APM]+)', line)
+            group_match = re.findall(r'[A-Z0-9\s]+$', line)
+            if len(time_match) == 2 and location:
+                start_time = convert_time(time_match[0])
+                end_time = convert_time(time_match[1])
+                group = normalize_group(group_match[0].strip() if group_match else "Unknown")
+                
+                # Append structured data as JSON
+                json_data.append({
+                    "date": current_date.strftime('%A %B %d, %Y'),
+                    "location": location,
+                    "group": group,
+                    "start_time": start_time,
+                    "end_time": end_time
+                })
 
-# Write to CSV
-csv_file_path = 'ch2_practice_schedule.csv'
-with open(csv_file_path, mode='w', newline='') as file:
-    writer = csv.writer(file)
-    writer.writerows(csv_data)
+# Save JSON data to a file
+json_file_path = 'practice_schedule.json'
+with open(json_file_path, 'w') as json_file:
+    json.dump(json_data, json_file, indent=4)
 
-print(f"CSV file created at {csv_file_path}")
+print(f"JSON data saved at {json_file_path}")
 
-# Create a new calendar
+# Now, convert JSON to ICS
 cal = Calendar()
 
-# Open the CSV and parse each event
-with open(csv_file_path, mode='r') as file:
-    reader = csv.reader(file)
-    next(reader)  # Skip header row
-    
-    for row in reader:
-        title, date_str, start_time_str, end_time_str, location = row
+# Parse the JSON data to create ICS events
+for event_data in json_data:
+    title = f"Practice {event_data['group']} at {event_data['location']}"
+    event_date = event_data['date']
+
+    try:
+        # Combine date and time for start and end times
+        event_date_obj = datetime.strptime(event_date, '%A %B %d, %Y')
+        start_datetime = datetime.combine(event_date_obj, datetime.strptime(event_data['start_time'], '%H:%M').time())
+        end_datetime = datetime.combine(event_date_obj, datetime.strptime(event_data['end_time'], '%H:%M').time())
         
-        # Parse the date and time
-        try:
-            event_date = datetime.strptime(date_str, '%A %B %d, %Y')
-        except ValueError:
-            print(f"Error parsing date: {date_str}")
-            continue
-            
-        start_time = datetime.strptime(start_time_str, '%H:%M').time()
-        end_time = datetime.strptime(end_time_str, '%H:%M').time()
-        
-        # Combine date and time to create datetime objects
-        start_datetime = datetime.combine(event_date, start_time)
-        end_datetime = datetime.combine(event_date, end_time)
-        
-        # Create a new event
+        # Create an ICS event
         event = Event()
         event.name = title
         event.begin = start_datetime
         event.end = end_datetime
-        event.location = location
+        event.location = event_data['location']
         
         # Add the event to the calendar
         cal.events.add(event)
 
-# Save the calendar as an ICS file
-ics_file_path = 'ch2_practice_schedule.ics'
+    except ValueError as e:
+        print(f"Error parsing date or time for event: {event_data}")
+        print(f"Error: {e}")
+
+# Save the ICS calendar to a file
+ics_file_path = 'practice_schedule.ics'
 with open(ics_file_path, 'w') as ics_file:
     ics_file.writelines(cal)
 
