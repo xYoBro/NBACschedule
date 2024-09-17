@@ -1,0 +1,44 @@
+[
+    {
+        "date": "2024-09-16",
+        "location": "LOYOLA UNIVERSITY",
+        "group": "CH4",
+        "start_time": "19:15",
+        "end_time": "21:00"
+    },
+    {
+        "date": "2024-09-17",
+        "location": "LOYOLA UNIVERSITY",
+        "group": "CH4",
+        "start_time": "19:15",
+        "end_time": "21:00"
+    },
+    {
+        "date": "2024-09-19",
+        "location": "LOYOLA UNIVERSITY",
+        "group": "CH4",
+        "start_time": "19:30",
+        "end_time": "21:00"
+    },
+    {
+        "date": "2024-09-20",
+        "location": "LOYOLA UNIVERSITY",
+        "group": "CH4",
+        "start_time": "19:00",
+        "end_time": "20:45"
+    },
+    {
+        "date": "2024-09-21",
+        "location": "LOYOLA UNIVERSITY",
+        "group": "CH4",
+        "start_time": "07:15",
+        "end_time": "09:00"
+    },
+    {
+        "date": "2024-09-22",
+        "location": "LOYOLA UNIVERSITY",
+        "group": "CH4",
+        "start_time": "07:30",
+        "end_time": "09:15"
+    }
+]

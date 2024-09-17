@@ -1,163 +1,226 @@
 import pdfplumber
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
-from ics import Calendar, Event
-from tkinter import Tk, Label, Button, Listbox, StringVar, filedialog, SINGLE
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import inch
+from tkinter import Tk, filedialog
+from icalendar import Calendar, Event, Alarm
+import pytz
 
 # Function to open a file dialog and get the PDF path
 def get_pdf_file():
     root = Tk()
-    root.withdraw()  # Close the root window
+    root.withdraw()
     filename = filedialog.askopenfilename(filetypes=[("PDF files", "*.pdf")])
-    root.destroy()  # Ensure the root window is closed
+    root.destroy()
     return filename
 
-# Function to clean and normalize text by stripping extra spaces and newlines
-def clean_text(text):
-    return re.sub(r'\s+', ' ', text.strip())
+# Function to normalize and clean the entire text
+def normalize_text(text):
+    # Replace various dash characters with a standard hyphen
+    text = re.sub(r'[–—−]', '-', text)
+    # Replace multiple spaces with a single space
+    text = re.sub(r'\s+', ' ', text)
+    return text.strip()
 
 # Function to normalize date strings into 'YYYY-MM-DD' format
 def normalize_date(date_str):
     try:
-        # Convert the month name to title case to handle mixed-case months
-        cleaned_date = date_str.title()
+        cleaned_date = date_str.strip().title()
         return datetime.strptime(cleaned_date, '%B %d, %Y').strftime('%Y-%m-%d')
     except ValueError:
-        cleaned_date = re.sub(r'\s+', ' ', date_str.replace(' ,', ',').strip())
-        cleaned_date = re.sub(r'(\w)\s+(\w)', r'\1\2', cleaned_date)  # Merge split words
-        try:
-            cleaned_date = cleaned_date.title()  # Ensure consistent case for the date string
-            return datetime.strptime(cleaned_date, '%B %d, %Y').strftime('%Y-%m-%d')
-        except ValueError:
-            print(f"Unable to parse date: {date_str}")
-            return None
+        print(f"Unable to parse date: {date_str}")
+        return None
 
 # Function to normalize time range strings into 'HH:MM' 24-hour format
 def normalize_time(time_str):
     try:
-        start_time, end_time = time_str.split("–")
-        start_time_24h = datetime.strptime(start_time.strip(), "%I:%M %p").strftime("%H:%M")
-        end_time_24h = datetime.strptime(end_time.strip(), "%I:%M %p").strftime("%H:%M")
+        # Normalize the dash character
+        time_str = re.sub(r'[–—−]', '-', time_str)
+        # Ensure there's a space before 'am' or 'pm'
+        time_str = re.sub(r'(\d)([ap]m)', r'\1 \2', time_str, flags=re.IGNORECASE)
+        time_str = re.sub(r'\s+', ' ', time_str)  # Remove extra spaces
+
+        start_time_str, end_time_str = time_str.split("-")
+        start_time_24h = datetime.strptime(start_time_str.strip(), "%I:%M %p").strftime("%H:%M")
+        end_time_24h = datetime.strptime(end_time_str.strip(), "%I:%M %p").strftime("%H:%M")
         return start_time_24h, end_time_24h
-    except (ValueError, AttributeError):
+    except (ValueError, AttributeError) as e:
         print(f"Unable to parse time: {time_str}")
         return None, None
 
-# Function to extract events from the PDF using pdfplumber
+# Function to extract events from the PDF
 def extract_events_from_pdf(pdf_path, selected_group):
     events = []
-    current_location = None  # Initialize location context
+    current_date = None
 
     with pdfplumber.open(pdf_path) as pdf:
+        full_text = ""
         for page in pdf.pages:
             text = page.extract_text()
-            print(f"Extracted text from page: {text[:500]}...")  # Debug: Print a snippet of the extracted text
-            lines = text.split("\n")
-            current_date = None
+            full_text += " " + text
 
-            for line in lines:
-                line = clean_text(line)
+        # Normalize the full text
+        full_text = normalize_text(full_text)
+        print("Extracted Text:")
+        print(full_text)
 
-                # Date extraction
-                date_match = re.search(r'([A-Za-z]+\s+\d{1,2},\s*\d{4})', line)
-                if date_match:
-                    current_date = normalize_date(date_match.group(0))
-                    continue
+        # Regular expression patterns
+        date_pattern = re.compile(r'([A-Za-z]+\s+\d{1,2},\s*\d{4})')
 
-                # Location extraction (if line starts with '@')
-                if '@' in line:
-                    location_match = re.search(r'@ ([A-Za-z \-]+)', line)
-                    if location_match:
-                        current_location = clean_text(location_match.group(1))
-                        print(f"Current location updated to: {current_location}")
-                    continue
+        # Updated event_pattern with non-greedy match and lookahead
+        event_pattern = re.compile(
+            r'(\d{1,2}:\d{2}\s*(?:am|pm)\s*[-–—−]\s*\d{1,2}:\d{2}\s*(?:am|pm))\s*:\s*([A-Z0-9/ ]+?)(?=\s*\d{1,2}:\d{2}\s*(?:am|pm)|\s*@|\s*(?:MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)|$)',
+            re.IGNORECASE
+        )
 
-                # Time and group extraction
-                time_match = re.findall(r'(\d{1,2}:\d{2}\s*(?:am|pm)[\s–-]*\d{1,2}:\d{2}\s*(?:am|pm))', line)
-                group_match = re.search(r':\s*([A-Z]{1,3}[0-9](?:\s*/\s*[A-Z]{1,3}[0-9])?)', line)
+        # Pattern to find locations
+        location_pattern = re.compile(r'@ ?([A-Z\s\-\(\)]+)')
 
-                if time_match and group_match and current_date and current_location:
-                    start_time, end_time = normalize_time(time_match[0])
-                    group = group_match.group(1).strip()
+        # Find all dates in the text
+        date_matches = list(date_pattern.finditer(full_text))
+        print(f"Found dates: {[match.group(0) for match in date_matches]}")
 
-                    # Debug: Print the matched group, start time, end time, and location
-                    print(f"Matched group: {group}, Start time: {start_time}, End time: {end_time}, Location: {current_location}")
+        # Iterate over each date and its corresponding text
+        for idx, date_match in enumerate(date_matches):
+            current_date = normalize_date(date_match.group(0))
+            start_idx = date_match.end()
 
-                    # Only include events for the selected group
-                    if start_time and end_time and group == selected_group:
+            # Determine the end index for the current date's events
+            if idx + 1 < len(date_matches):
+                end_idx = date_matches[idx + 1].start()
+                date_text = full_text[start_idx:end_idx]
+            else:
+                date_text = full_text[start_idx:]
+
+            # Find all locations within the date_text
+            location_matches = list(location_pattern.finditer(date_text))
+
+            # For each location block
+            for loc_idx, loc_match in enumerate(location_matches):
+                location_name = loc_match.group(1).strip()
+                loc_start_idx = loc_match.end()
+
+                # Determine the end index for this location's events
+                if loc_idx + 1 < len(location_matches):
+                    loc_end_idx = location_matches[loc_idx + 1].start()
+                    loc_text = date_text[loc_start_idx:loc_end_idx]
+                else:
+                    loc_text = date_text[loc_start_idx:]
+
+                # Find all events within the location text
+                for event_match in event_pattern.finditer(loc_text):
+                    time_str = event_match.group(1)
+                    group = event_match.group(2)
+                    # Remove any extra whitespace
+                    group = group.strip()
+                    print(f"Matched event: time='{time_str}', group='{group}', location='{location_name}'")
+
+                    start_time, end_time = normalize_time(time_str)
+
+                    if start_time and end_time and selected_group == group:
                         event = {
                             "date": current_date,
-                            "location": current_location,
+                            "location": location_name,
                             "group": group,
                             "start_time": start_time,
                             "end_time": end_time
                         }
                         events.append(event)
 
-    # Debug: Print the final events extracted
-    print(f"Events extracted: {events}")
     return events
 
-# Function to generate an ICS file from the list of events
-def generate_ics(events, output_file='practice_schedule.ics'):
+# Function to generate a PDF file from the list of events
+def generate_pdf(events, output_file):
+    c = canvas.Canvas(output_file, pagesize=letter)
+    width, height = letter
+    text_object = c.beginText()
+    text_object.setTextOrigin(inch, height - inch)
+    text_object.setFont("Helvetica", 12)
+
+    if events:
+        text_object.textLine(f"Practice Schedule for {events[0]['group']}")
+    else:
+        text_object.textLine("No events found.")
+    text_object.textLine("")
+
+    for event in events:
+        text_object.textLine(f"Date: {event['date']}")
+        text_object.textLine(f"Time: {event['start_time']} - {event['end_time']}")
+        text_object.textLine(f"Location: {event['location']}")
+        text_object.textLine("")
+    c.drawText(text_object)
+    c.showPage()
+    c.save()
+
+# Function to generate an .ics file from the list of events with alerts
+def generate_ics(events, output_file):
     cal = Calendar()
+    cal.add('prodid', '-//NBAC Schedule//mxm.dk//')
+    cal.add('version', '2.0')
 
-    for event_data in events:
-        event = Event()
-        event.name = f"{event_data['group']} Practice"
-        event.begin = f"{event_data['date']} {event_data['start_time']}"
-        event.end = f"{event_data['date']} {event_data['end_time']}"
-        event.location = event_data['location']
-        cal.events.add(event)
+    # Timezone settings (adjust as needed)
+    tz = pytz.timezone('America/New_York')
 
-    with open(output_file, 'w') as ics_file:
-        ics_file.writelines(cal)
-    print(f"ICS file created at {output_file}")
+    for event in events:
+        vevent = Event()
+        event_date = datetime.strptime(event['date'], '%Y-%m-%d')
+        start_time = datetime.strptime(event['start_time'], '%H:%M').time()
+        end_time = datetime.strptime(event['end_time'], '%H:%M').time()
 
-# Function to create a Tkinter UI for selecting the group from a list
-def select_group():
-    def submit_selection():
-        selected_value = group_listbox.get(group_listbox.curselection())
-        root.quit()  # Exit the Tkinter main loop
-        root.destroy()  # Close the popup window
-        run_script_with_selection(selected_value)
+        start_datetime = tz.localize(datetime.combine(event_date, start_time))
+        end_datetime = tz.localize(datetime.combine(event_date, end_time))
 
-    root = Tk()
-    root.title("Select Group")
+        vevent.add('dtstart', start_datetime)
+        vevent.add('dtend', end_datetime)
+        vevent.add('summary', f"Practice: {event['group']} @ {event['location']}[Sign up in between here]")
+        vevent.add('location', event['location'])
+        vevent.add('description', f"Practice for group {event['group']} at {event['location']}.")
 
-    group_var = StringVar()
+        # Optionally, add a unique identifier
+        vevent['uid'] = f"{event['date']}_{event['start_time']}_{event['group']}@nbac.com"
 
-    Label(root, text="Select Group for Event Extraction").pack(pady=10)
+        # Create an alarm that triggers 1 hour before the event
+        alarm = Alarm()
+        alarm.add('action', 'DISPLAY')
+        alarm.add('description', f"Reminder: Practice for {event['group']} at {event['location']} in 1 hour.")
+        alarm.add('trigger', timedelta(hours=-1))
+        vevent.add_component(alarm)
 
-    group_listbox = Listbox(root, listvariable=group_var, selectmode=SINGLE, height=6)
-    group_listbox.pack(pady=10)
+        cal.add_component(vevent)
 
-    # Available groups for selection
-    available_groups = ["CH2", "CH4", "P1", "P2", "IM3", "IM4", "IM5", "D1", "D2", "CHA", "IMB", "IMA"]
-    for group in available_groups:
-        group_listbox.insert("end", group)
+    # Write to .ics file
+    with open(output_file, 'wb') as f:
+        f.write(cal.to_ical())
 
-    Button(root, text="Submit", command=submit_selection).pack(pady=10)
-
-    root.mainloop()
-
-# Function to run the main script with the selected group
-def run_script_with_selection(selected_group):
+def main():
     pdf_file_path = get_pdf_file()
     if pdf_file_path:
-        events = extract_events_from_pdf(pdf_file_path, selected_group)
+        groups_to_process = ["CH2", "CH4"]
+        for group in groups_to_process:
+            events = extract_events_from_pdf(pdf_file_path, group)
+            if events:
+                # Output events to JSON (optional)
+                json_output_file = f'practice_schedule_{group}.json'
+                with open(json_output_file, 'w') as json_file:
+                    json.dump(events, json_file, indent=4)
+                print(f"Events for {group} saved to {json_output_file}")
 
-        # Output events to JSON (optional)
-        with open('practice_schedule.json', 'w') as json_file:
-            json.dump(events, json_file, indent=4)
-        print("Events saved to practice_schedule.json")
+                # Generate PDF file
+                pdf_output_file = f'practice_schedule_{group}.pdf'
+                generate_pdf(events, pdf_output_file)
+                print(f"PDF file for {group} created at {pdf_output_file}")
 
-        # Generate ICS file
-        generate_ics(events)
+                # Generate ICS file
+                ics_output_file = f'practice_schedule_{group}.ics'
+                generate_ics(events, ics_output_file)
+                print(f"ICS file for {group} created at {ics_output_file}")
+            else:
+                print(f"No events found for group {group}")
     else:
         print("No PDF file selected.")
-    exit()  # Ensure the script exits cleanly after processing
 
-# Start the script by opening the group selection UI
-select_group()
+if __name__ == '__main__':
+    main()
