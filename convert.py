@@ -175,7 +175,7 @@ def generate_ics(events, output_file):
 
         vevent.add('dtstart', start_datetime)
         vevent.add('dtend', end_datetime)
-        vevent.add('summary', f"Practice: {event['group']} @ {event['location']}[Sign up in between here]")
+        vevent.add('summary', f"Edit here to sign up")
         vevent.add('location', event['location'])
         vevent.add('description', f"Practice for group {event['group']} at {event['location']}.")
 
