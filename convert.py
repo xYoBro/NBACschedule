@@ -186,7 +186,7 @@ def generate_ics(events, output_file):
         alarm = Alarm()
         alarm.add('action', 'DISPLAY')
         alarm.add('description', f"Reminder: Practice for {event['group']} at {event['location']} in 1 hour.")
-        alarm.add('trigger', timedelta(hours=-1))
+        alarm.add('trigger', timedelta(hours=-2))
         vevent.add_component(alarm)
 
         cal.add_component(vevent)
