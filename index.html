@@ -656,25 +656,34 @@ function buildIcs(events) {
 const GCAL_IMPORT = '<a href="https://calendar.google.com/calendar/u/0/r/settings/export" target="_blank" rel="noopener">calendar.google.com → Import</a>';
 const PLATFORM = (() => {
   const ua = navigator.userAgent;
-  if (/iPhone|iPad/.test(ua)) return { label:"Download for Apple Calendar",
-    hint:`Tap the ⬇ button in Safari's address bar, tap the file, then "Add All" — every practice lands in Calendar.` };
+  if (/iPhone|iPad/.test(ua)) return { ios:true, label:"Add to Apple Calendar" };   // hint is built in download()
   if (/Android/.test(ua)) return { label:"Download calendar file (.ics)",
     hint:`The Google Calendar app can't open .ics files — import the downloaded file at ${GCAL_IMPORT}.` };
   if (/Mac/.test(ua)) return { label:"Download for Apple Calendar",
-    hint:`Open the downloaded file — Calendar asks which calendar to add the practices to. (Google Calendar users: import it at ${GCAL_IMPORT}.)` };
+    hint:`Open the downloaded file — Calendar asks which calendar to add the practices to. (Safari usually opens it for you; in Chrome, choose "Always open files of this type" once to make it automatic. Google Calendar users: import at ${GCAL_IMPORT}.)` };
   if (/Windows/.test(ua)) return { label:"Download for Outlook",
-    hint:`Open the downloaded file — Outlook offers to import every practice. (Google Calendar users: import it at ${GCAL_IMPORT}.)` };
+    hint:`Open the downloaded file — Outlook offers to import every practice. (In the browser's download menu, "Always open files of this type" makes it automatic. Google Calendar users: import at ${GCAL_IMPORT}.)` };
   return { label:"Download calendar file (.ics)",
     hint:"Open the downloaded file — your calendar app will offer to import the practices." };
 })();
 function download(evs, suffix="") {
   if (!evs.length) return;
   const blob = new Blob([buildIcs(evs)], { type:"text/calendar;charset=utf-8" });
-  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-  a.download = `NBAC-${state.range ? state.range.start : evs[0].date}-${state.picks.map(labelFor).join("-").replace(/[^\w-]+/g,"_")}${suffix}.ics`; a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+  const url = URL.createObjectURL(blob);
+  const fname = `NBAC-${state.range ? state.range.start : evs[0].date}-${state.picks.map(labelFor).join("-").replace(/[^\w-]+/g,"_")}${suffix}.ics`;
+  let hint;
+  if (PLATFORM.ios) {
+    // Hand the file straight to iOS instead of saving it: Safari QuickLook-previews
+    // a text/calendar blob with a native "Add All" button — one tap into Calendar.
+    window.open(url, "_blank");
+    hint = `A preview should have opened — tap "Add All" to put the practices in Calendar. If nothing opened, <a href="${url}" download="${fname}">download the file</a> and tap it in Safari's ⬇ downloads menu.`;
+  } else {
+    const a = document.createElement("a"); a.href = url; a.download = fname; a.click();
+    hint = `Downloaded. ${PLATFORM.hint}`;
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 300000);   // keep the fallback link alive for 5 min
   rememberImport(); setStep(4);
-  $(".exportbar .hint").innerHTML = `Downloaded. ${PLATFORM.hint} Re-importing the same week later updates matching events rather than duplicating them; dropped practices must be deleted by hand.`;
+  $(".exportbar .hint").innerHTML = `${hint} Re-importing the same week later updates matching events rather than duplicating them; dropped practices must be deleted by hand.`;
 }
 $("#downloadBtn").textContent = PLATFORM.label;
 $("#downloadBtn").addEventListener("click", () => download(exportable()));
