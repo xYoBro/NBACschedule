@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0F2A44">
+<title>NBAC Schedule → Calendar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>if (typeof pdfjsLib === "undefined") document.write('<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"><\/script>');</script>
+<style>
+  :root{
+    --pool:#0F2A44; --pool-deep:#081A2E; --aqua:#1FB8C9; --aqua-ink:#0E7C89;
+    --lane:#F2C14E; --tile:#EEF4F7; --tile-2:#DCE7EE; --ink:#15212B; --ink-2:#4F6272;
+    --red:#D64545; --red-bg:#FBE9E9; --warn-bg:#FFF6DC; --new-bg:#E6F8FA;
+    --paper:#FFFFFF; --radius:10px;
+    --display:"Barlow Condensed",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--tile);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45}
+  a{color:var(--aqua-ink)}
+  button{font:inherit;cursor:pointer}
+  input,select,textarea{font:inherit;color:var(--ink)}
+  :focus-visible{outline:3px solid var(--aqua);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  .hidden{display:none!important}
+
+  header{background:var(--pool);color:#fff;padding:20px 28px 16px;border-bottom:6px solid var(--lane)}
+  header .wrap{max-width:1180px;margin:0 auto;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  h1{font-family:var(--display);font-weight:700;font-size:34px;letter-spacing:.5px;text-transform:uppercase;margin:0;line-height:1}
+  h1 small{display:block;font-family:var(--body);font-weight:500;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--aqua);margin-bottom:6px}
+  .hdr-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .hdr-actions .btn{background:var(--pool-deep);color:#fff;border-color:rgba(255,255,255,.2)}
+  .hdr-actions .btn:hover{border-color:var(--aqua);color:var(--aqua)}
+
+  .steps{max-width:1180px;margin:18px auto 0;padding:0 28px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .step{background:var(--paper);border-radius:8px;padding:10px 14px;display:flex;gap:10px;align-items:center;color:var(--ink-2);border:1px solid var(--tile-2)}
+  .step .n{font-family:var(--display);font-size:22px;font-weight:700;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--tile);color:var(--ink-2);flex-shrink:0}
+  .step.active{color:var(--ink);border-color:var(--aqua)} .step.active .n{background:var(--aqua);color:var(--pool-deep)}
+  .step.done{color:var(--ink)} .step.done .n{background:var(--pool);color:var(--lane)}
+  .step b{display:block;font-weight:600;font-size:14px} .step span{font-size:12px}
+
+  main{max-width:1180px;margin:0 auto;padding:20px 28px 90px}
+  .card{background:var(--paper);border-radius:var(--radius);box-shadow:0 1px 0 var(--tile-2);margin-top:20px;overflow:hidden}
+  .card-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 20px;border-bottom:1px solid var(--tile-2);flex-wrap:wrap}
+  .card-head h2{font-family:var(--display);font-size:24px;text-transform:uppercase;margin:0;letter-spacing:.3px;display:flex;align-items:baseline;gap:10px}
+  .card-head h2 .grp{font-family:var(--mono);font-size:14px;font-weight:500;color:var(--aqua-ink);letter-spacing:0;text-transform:none}
+  .card-body{padding:16px 20px}
+  .muted{color:var(--ink-2);font-size:13px}
+
+  #drop{border:2px dashed var(--aqua);border-radius:var(--radius);background:var(--paper);padding:40px 24px;text-align:center;transition:background .15s,border-color .15s;margin-top:20px}
+  #drop.over{background:var(--new-bg);border-color:var(--aqua-ink);border-style:solid}
+  #drop h2{font-family:var(--display);font-size:28px;text-transform:uppercase;margin:0 0 6px;letter-spacing:.3px}
+  #drop p{margin:0 0 14px;color:var(--ink-2)}
+  #drop .browse{background:var(--pool);color:#fff;border:0;border-radius:6px;padding:10px 18px;font-weight:600}
+  #drop input{display:none}
+  #drop.busy{opacity:.6;pointer-events:none}
+  #drop.compact{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left}
+  #drop.compact h2{font-size:18px;margin:0} #drop.compact p{display:none}
+  .status{margin:10px 0 0;font-family:var(--mono);font-size:13px;color:var(--ink-2);min-height:1.4em}
+
+  .btn{border:1px solid var(--tile-2);background:#fff;border-radius:6px;padding:7px 12px;font-size:13px;font-weight:500;color:var(--ink)}
+  .btn:hover{border-color:var(--aqua-ink);color:var(--aqua-ink)}
+  .btn.primary{background:var(--pool);color:#fff;border-color:var(--pool);font-weight:600;padding:11px 20px;font-size:15px}
+  .btn.primary:hover{background:var(--pool-deep);color:#fff}
+  .btn.primary:disabled{opacity:.45;cursor:not-allowed}
+  .btn.danger{color:var(--red)} .btn.danger:hover{border-color:var(--red)}
+  .btn.link{border:0;background:none;color:var(--aqua-ink);padding:0;text-decoration:underline}
+
+  .groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+  .g{border:1px solid var(--tile-2);border-radius:8px;padding:10px 12px;display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;background:#fff}
+  .g.on{border-color:var(--aqua);background:var(--new-bg)}
+  .g input[type=checkbox]{width:18px;height:18px;accent-color:var(--aqua-ink)}
+  .g .code{font-family:var(--mono);font-weight:500;font-size:15px}
+  .g .cnt{font-size:12px;color:var(--ink-2)}
+  .g .who{grid-column:1/-1;border:1px solid var(--tile-2);border-radius:6px;padding:6px 8px;font-size:13px}
+  .g.absent{opacity:.55}
+  .picker-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap}
+
+  .diff{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .diff > div{border-radius:8px;padding:10px 12px;font-size:13px}
+  .diff h4{margin:0 0 6px;font-family:var(--display);font-size:18px;text-transform:uppercase;letter-spacing:.3px}
+  .diff .add{background:var(--new-bg)} .diff .chg{background:var(--warn-bg)} .diff .rem{background:var(--red-bg)}
+  .diff ul{margin:0;padding-left:16px} .diff li{margin:2px 0;font-family:var(--mono);font-size:12px}
+  .diff .none{color:var(--ink-2)}
+
+  .row{display:grid;grid-template-columns:minmax(280px,1fr) 8px minmax(300px,1.1fr);border-bottom:1px solid var(--tile-2)}
+  .row:last-child{border-bottom:0}
+  .row.excluded{opacity:.5}
+  .row.has-error .import{background:var(--red-bg)}
+  .row.has-warn .import{background:var(--warn-bg)}
+  .lane{background:repeating-linear-gradient(to bottom,var(--lane) 0 14px,var(--pool) 14px 28px)}
+  .row.has-error .lane{background:var(--red)}
+  .evidence{padding:14px 16px}
+  .evidence .cap{font-size:12px;color:var(--ink-2);text-transform:uppercase;letter-spacing:.06em;margin:0 0 8px;font-weight:600;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  .badge{font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:999px;background:var(--tile);color:var(--ink-2);text-transform:none;letter-spacing:0}
+  .badge.new{background:var(--aqua);color:var(--pool-deep)} .badge.chg{background:var(--lane);color:var(--pool-deep)}
+  .evidence canvas{width:100%;height:auto;display:block;border:1px solid var(--tile-2);border-radius:6px;background:#fff}
+  .evidence .raw{font-family:var(--mono);font-size:12px;color:var(--ink-2);margin:8px 0 0;word-break:break-word}
+  .evidence .manual{border:1px dashed var(--tile-2);border-radius:6px;padding:22px;text-align:center;color:var(--ink-2);font-size:13px}
+  .import{padding:14px 16px}
+  .fields{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 12px}
+  .f{display:flex;flex-direction:column;gap:4px} .f.wide{grid-column:1/-1}
+  .f label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2);font-weight:600}
+  .f input,.f select{border:1px solid var(--tile-2);border-radius:6px;padding:7px 9px;background:#fff}
+  .f input[type=time],.f input[type=date],.f input.mono{font-family:var(--mono);font-size:14px}
+  .preview{margin:12px 0 0;padding:10px 12px;background:var(--tile);border-radius:6px;font-size:13px}
+  .preview .when{font-family:var(--mono);font-size:13px}
+  .flags{margin:10px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px}
+  .flags li{font-size:13px;padding:6px 10px;border-radius:6px;border-left:3px solid;background:#fff}
+  .flags li.error{border-color:var(--red);color:#7C1F1F} .flags li.warn{border-color:#C79A1E;color:#5E4A0C} .flags li.info{border-color:var(--aqua);color:var(--aqua-ink)}
+  .row-actions{display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:10px;flex-wrap:wrap}
+  .inc{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500} .inc input{width:18px;height:18px;accent-color:var(--aqua-ink)}
+  .empty{padding:20px;color:var(--ink-2);font-size:14px}
+
+  .notes ul{margin:0;padding-left:18px} .notes li{margin:4px 0;font-size:14px}
+  details{margin-top:12px} summary{cursor:pointer;font-weight:500;color:var(--aqua-ink);font-size:14px}
+  .alltable{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
+  .alltable td,.alltable th{text-align:left;padding:5px 8px;border-bottom:1px solid var(--tile-2)}
+  .alltable th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2)}
+  .alltable td.t{font-family:var(--mono)} .alltable tr.mine td{background:var(--new-bg)}
+
+  .drawer{position:fixed;inset:0;background:rgba(8,26,46,.45);display:grid;place-items:center;z-index:50;padding:20px}
+  .drawer .panel{background:#fff;border-radius:var(--radius);width:min(720px,100%);max-height:90vh;overflow:auto;padding:20px 22px}
+  .drawer h2{font-family:var(--display);font-size:24px;text-transform:uppercase;margin:0 0 4px}
+  .drawer h3{font-family:var(--display);font-size:18px;text-transform:uppercase;margin:18px 0 8px;letter-spacing:.3px}
+  .settings-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 12px}
+  .pools-edit{display:grid;grid-template-columns:1fr 2fr;gap:6px 10px;font-size:13px;align-items:center}
+  .pools-edit input{border:1px solid var(--tile-2);border-radius:6px;padding:6px 8px;width:100%}
+  .drawer .foot{display:flex;justify-content:space-between;gap:10px;margin-top:18px;flex-wrap:wrap}
+  .share{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .share input{flex:1;border:1px solid var(--tile-2);border-radius:6px;padding:7px 9px;font-family:var(--mono);font-size:12px}
+  .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--pool-deep);color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+
+  .exportbar{position:sticky;bottom:0;margin-top:24px;background:var(--pool);color:#fff;border-radius:var(--radius);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;box-shadow:0 -6px 24px rgba(15,42,68,.18)}
+  .exportbar .sum{font-size:14px} .exportbar .sum b{font-family:var(--display);font-size:22px;color:var(--lane);margin-right:4px}
+  .exportbar .warnnote{color:var(--lane);font-size:13px}
+  .exportbar .acts{display:flex;gap:8px;flex-wrap:wrap}
+  .exportbar .btn{background:transparent;color:#fff;border-color:rgba(255,255,255,.3)} .exportbar .btn:hover{border-color:var(--aqua);color:var(--aqua)}
+  .exportbar .btn.primary{background:var(--aqua);border-color:var(--aqua);color:var(--pool-deep)} .exportbar .btn.primary:hover{background:#38CBDB}
+  .exportbar .hint{font-size:12px;color:#B9CFDD;width:100%}
+
+  @media (max-width:760px){
+    .row{grid-template-columns:1fr}
+    .lane{height:6px;background:repeating-linear-gradient(to right,var(--lane) 0 14px,var(--pool) 14px 28px)}
+    main,header,.steps{padding-left:16px;padding-right:16px}
+    .steps{grid-template-columns:1fr 1fr} .diff{grid-template-columns:1fr} .settings-grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1><small>North Baltimore Aquatic Club</small>Weekly schedule → calendar</h1>
+    <div class="hdr-actions">
+      <button class="btn" id="shareBtn" type="button">Share my link</button>
+      <button class="btn" id="settingsBtn" type="button">Settings</button>
+    </div>
+  </div>
+</header>
+
+<nav class="steps" aria-label="Progress">
+  <div class="step active" data-step="1"><div class="n">1</div><div><b>Drop the PDF</b><span>the weekly swimmers' schedule</span></div></div>
+  <div class="step" data-step="2"><div class="n">2</div><div><b>Pick groups</b><span>and who they're for</span></div></div>
+  <div class="step" data-step="3"><div class="n">3</div><div><b>Check &amp; fix</b><span>PDF line vs. calendar event</span></div></div>
+  <div class="step" data-step="4"><div class="n">4</div><div><b>Download</b><span>open the .ics in your calendar</span></div></div>
+</nav>
+
+<main>
+  <div id="drop">
+    <h2>Drop this week's PDF here</h2>
+    <p>Or drop several — duplicates are ignored. Nothing leaves your computer.</p>
+    <button class="browse" id="browseBtn" type="button">Choose a PDF</button>
+    <input type="file" id="fileInput" accept="application/pdf" multiple>
+  </div>
+  <p class="status" id="status"></p>
+
+  <div class="card hidden" id="picker">
+    <div class="card-head"><h2>Which groups?</h2><span class="muted" id="pickerMeta"></span></div>
+    <div class="card-body">
+      <div class="groups" id="groups"></div>
+      <div class="picker-foot">
+        <span class="muted">Optional: type a name next to a group (a swimmer's name, say) and it becomes the event title. Your picks are saved in this browser and in your share link.</span>
+        <button class="btn primary" id="continueBtn" type="button" disabled>Review practices →</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="results" class="hidden">
+    <p class="muted" style="margin:16px 0 0"><button class="btn link" id="changeGroups" type="button">Change which groups</button></p>
+    <div class="card" id="diffCard"><div class="card-head"><h2>Since your last import</h2><span class="muted" id="diffMeta"></span></div><div class="card-body"><div class="diff" id="diff"></div><p class="muted" id="diffNote"></p></div></div>
+    <div id="sections"></div>
+    <div class="card notes"><div class="card-head"><h2>Things worth a glance</h2></div><div class="card-body" id="notes"></div></div>
+
+    <div class="exportbar">
+      <div class="sum"><b id="count">0</b><span id="countLabel">practices will be added</span><div class="warnnote" id="warnnote"></div></div>
+      <div class="acts">
+        <button class="btn" id="copyBtn" type="button">Copy as text</button>
+        <button class="btn hidden" id="changedBtn" type="button">Download changes only</button>
+        <button class="btn primary" id="downloadBtn" type="button">Download calendar file (.ics)</button>
+      </div>
+      <div class="hint">Open the downloaded file and your calendar app will ask where to add these. Re-importing the same week later updates matching events rather than duplicating them. It can't delete, so dropped practices are listed above for you to delete by hand.</div>
+    </div>
+  </div>
+</main>
+
+<div class="drawer hidden" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+  <div class="panel">
+    <h2 id="drawerTitle">Settings</h2>
+    <p class="muted">Saved in this browser only. Anyone using your share link gets your group picks but their own settings.</p>
+    <h3>Events</h3>
+    <div class="settings-grid" id="settingsForm"></div>
+    <h3>Pools &amp; addresses</h3>
+    <p class="muted">Addresses let Apple/Google Calendar show travel time and a map. Fix any that are wrong.</p>
+    <div class="pools-edit" id="poolsEdit"></div>
+    <h3>Share link</h3>
+    <p class="muted">Encodes your group picks and names, nothing else. Send it to a carpool parent or bookmark it.</p>
+    <div class="share"><input type="text" id="shareUrl" readonly><button class="btn" id="copyShare" type="button">Copy</button></div>
+    <h3>Memory</h3>
+    <p class="muted" id="memoryInfo"></p>
+    <div class="foot">
+      <button class="btn danger" id="forgetBtn" type="button">Forget last import &amp; picks</button>
+      <div><button class="btn" id="resetSettings" type="button">Reset to defaults</button> <button class="btn primary" id="closeDrawer" type="button">Done</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   1. DEFAULTS — the only knobs a maintainer should need to touch.
+      Everything a *user* changes lives in the Settings drawer / share link.
+   ============================================================================ */
+const DEFAULTS = {
+  pools: [
+    { name: "Loyola University",        aliases: ["LOYOLA UNIVERSITY","LOYOLA","LOYOLA U","LOYOLA UNIV"],
+      address: "Loyola University Maryland, 4501 N Charles St, Baltimore, MD 21210" },
+    { name: "Coppermine – Meadowbrook", aliases: ["COPPERMINE – MEADOWBROOK","COPPERMINE - MEADOWBROOK","MEADOWBROOK","COPPERMINE MEADOWBROOK"],
+      address: "Meadowbrook Aquatic Center, 5700 Cottonworth Ave, Baltimore, MD 21209" },
+    { name: "Coppermine – Bel Air",     aliases: ["COPPERMINE – BEL AIR","COPPERMINE - BEL AIR","BEL AIR","COPPERMINE BEL AIR"],
+      address: "Coppermine Bel Air, Bel Air, MD" },
+    { name: "Gilman",                   aliases: ["GILMAN","GILMAN SCHOOL"],
+      address: "Gilman School, 5407 Roland Ave, Baltimore, MD 21210" },
+    { name: "Goucher",                  aliases: ["GOUCHER","GOUCHER COLLEGE"],
+      address: "Goucher College, 1021 Dulaney Valley Rd, Towson, MD 21204" },
+  ],
+  // Backstop list of real group names; each PDF's start-date list is also read automatically.
+  knownGroups: ["HP1","P1","P2","P3","CH1","CH2","CH3","CH4","CHB","IM1","IM2","IM3","IM4","IM5","IMA","D1","D2","D3","DA","EXP1"],
+  settings: {
+    timezone: "America/New_York",
+    calendarName: "NBAC Swim Practice",
+    titleTemplate: "{name} swim ({group})",   // {name} = label typed next to the group (falls back to group), {group}, {pool}
+    alarmMinutes: 45,
+    pickupAlarm: false,
+    earliestStart: "05:00", latestEnd: "22:00", minMinutes: 30, maxMinutes: 180,
+  },
+};
+const LS = { settings:"nbac:settings", pools:"nbac:pools", picks:"nbac:picks", last:"nbac:last" };
+
+/* ============================================================================
+   2. State, persistence, share link
+   ============================================================================ */
+const clone = o => JSON.parse(JSON.stringify(o));
+function load(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); if (v == null) return clone(d); return Array.isArray(d) ? v : Object.assign(clone(d), v); } catch { return clone(d); } }
+function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+
+const state = {
+  pages:[], lines:[], events:[], allSlots:[], notes:[], fileHashes:new Set(), manualSeq:0, range:null,
+  groupsFound:{}, groupStarts:{}, picks:[], diff:null,
+  settings: load(LS.settings, DEFAULTS.settings), pools: load(LS.pools, DEFAULTS.pools),
+};
+
+// Share link: #g=P1:Peyton,CH1:Henry   (group[:label], comma-separated)
+function picksFromHash() {
+  const m = location.hash.match(/[#&]g=([^&]+)/); if (!m) return null;
+  return decodeURIComponent(m[1]).split(",").map(s => { const [g, ...n] = s.split(":"); return { group: normGroup(g), name: n.join(":").trim() }; }).filter(p => p.group);
+}
+const hashFromPicks = picks => picks.length ? "#g=" + encodeURIComponent(picks.map(p => p.name ? `${p.group}:${p.name}` : p.group).join(",")) : "";
+const shareUrl = () => location.href.split("#")[0] + hashFromPicks(state.picks);
+
+/* ============================================================================
+   3. PDF → lines of text (page + y kept so we can screenshot them)
+   ============================================================================ */
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+async function loadPdf(file) {
+  const buf = await file.arrayBuffer();
+  const hash = await sha1(buf);
+  if (state.fileHashes.has(hash)) { state.notes.push(`Skipped "${file.name}" — identical to a file already loaded.`); return; }
+  state.fileHashes.add(hash);
+  const doc = await pdfjsLib.getDocument({ data: buf }).promise;
+  for (let p = 1; p <= doc.numPages; p++) {
+    const page = await doc.getPage(p);
+    const content = await page.getTextContent();
+    const pageIdx = state.pages.length;
+    state.pages.push({ page, canvas:null, viewport: page.getViewport({ scale: 2 }), file:file.name });
+    const items = content.items.filter(i => i.str && i.str.trim());
+    items.sort((a, b) => (b.transform[5] - a.transform[5]) || (a.transform[4] - b.transform[4]));
+    let cur = null;
+    for (const it of items) {
+      const y = it.transform[5], x = it.transform[4];
+      if (!cur || Math.abs(cur.y - y) > 3) { cur = { pageIdx, y, x, text:"", height: it.height || 10 }; state.lines.push(cur); }
+      cur.text += (cur.text && !cur.text.endsWith(" ") && !it.str.startsWith(" ") ? " " : "") + it.str;
+      cur.height = Math.max(cur.height, it.height || 10);
+    }
+  }
+}
+async function sha1(buf) { const h = await crypto.subtle.digest("SHA-1", buf); return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2,"0")).join(""); }
+
+/* ============================================================================
+   4. Parsing — tolerant of the schedule's known human errors
+   ============================================================================ */
+const DAYS = ["SUNDAY","MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY"];
+const MONTHS = ["JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"];
+const MONTH_RE = MONTHS.map(m => m.slice(0,3)).join("|");
+const RE = {
+  date: new RegExp(`^(${DAYS.join("|")})?\\s*,?\\s*((?:${MONTH_RE})[A-Z]*)\\.?\\s+(\\d{1,2})(?:ST|ND|RD|TH)?\\s*,?\\s*(\\d{4})?\\s*$`, "i"),
+  pool: /^@\s*(.+?)\s*:?\s*$/,
+  none: /^N[O0]\s*PRACT/i,
+  slot: /^(\d{1,2})[:.](\d{2})\s*([ap]\.?m\.?)?\s*(?:[–—-]+|to)\s*(\d{1,2})[:.](\d{2})\s*([ap]\.?m\.?)?\s*[:;.\-–]?\s*(.*)$/i,
+  startDates: /^START\s+DATES/i,
+  startLine: /^([A-Z0-9,\s/&]+?):\s*(?:[A-Z]+\s+)?([A-Z]+)\s+(\d{1,2}),?\s*(\d{4})?/i,
+  titleRange: new RegExp(`\\(\\s*((?:${MONTH_RE})[A-Z]*)\\s+(\\d{1,2})\\s*[–—-]+\\s*(?:((?:${MONTH_RE})[A-Z]*)\\s+)?(\\d{1,2})\\s*,?\\s*(\\d{4})\\s*\\)`, "i"),
+  stopSection: /^(SAVE THE DATE|NOTE:|STROKE CLINIC|THERE WILL BE)/i,
+};
+function monthIndex(s) { const k = s.slice(0,3).toUpperCase(); return MONTHS.findIndex(m => m.startsWith(k)); }
+const pad = n => String(n).padStart(2,"0");
+const isoDate = (y,m,d) => `${y}-${pad(m+1)}-${pad(d)}`;
+const dateFromIso = iso => { const [y,m,d] = iso.split("-").map(Number); return new Date(y, m-1, d); };
+const fmtDate = iso => dateFromIso(iso).toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" });
+const fmt12 = hhmm => { if (!hhmm) return "?"; const [h,m] = hhmm.split(":").map(Number); return `${((h+11)%12)+1}:${pad(m)} ${h<12?"AM":"PM"}`; };
+const mins = hhmm => { const [h,m] = hhmm.split(":").map(Number); return h*60+m; };
+
+function normGroup(raw) {
+  let g = (raw||"").toUpperCase().replace(/[\s\-_.]/g,"");
+  if (!/^[A-Z][A-Z0-9]*$/.test(g)) return g;
+  const letters = g.replace(/[0-9ILO]+$/,""); let tail = g.slice(letters.length);
+  tail = tail.replace(/I|L/g,"1").replace(/O/g,"0");
+  return letters + tail;
+}
+const splitGroups = s => s.split(/\s*(?:\/|,|&|\+|\band\b)\s*/i).map(x => x.trim()).filter(Boolean);
+
+function normPool(raw) {
+  const clean = s => s.toUpperCase().replace(/[–—]/g,"-").replace(/\s+/g," ").replace(/\s*-\s*/g," - ").trim();
+  const key = clean(raw);
+  for (const p of state.pools) for (const a of p.aliases) if (clean(a) === key) return { pool:p, exact:true };
+  let best = null, bestScore = 0;
+  for (const p of state.pools) for (const a of p.aliases) { const s = similarity(key, clean(a)); if (s > bestScore) { bestScore = s; best = p; } }
+  return bestScore >= 0.6 ? { pool:best, exact:false } : { pool:null, exact:false };
+}
+function similarity(a, b) { if (a.includes(b) || b.includes(a)) return 0.85; return 1 - lev(a,b) / Math.max(a.length, b.length); }
+function lev(a, b) {
+  const dp = Array.from({length:a.length+1}, (_,i) => [i, ...Array(b.length).fill(0)]);
+  for (let j=1;j<=b.length;j++) dp[0][j]=j;
+  for (let i=1;i<=a.length;i++) for (let j=1;j<=b.length;j++) dp[i][j] = Math.min(dp[i-1][j]+1, dp[i][j-1]+1, dp[i-1][j-1] + (a[i-1]===b[j-1]?0:1));
+  return dp[a.length][b.length];
+}
+function to24(h, m, ap, fallbackAp) {
+  let ampm = (ap || fallbackAp || "").toLowerCase().replace(/\./g,"");
+  if (!ampm) ampm = (h >= 5 && h <= 11) ? "ambiguous" : "pm";
+  let H = h % 12;
+  if (ampm === "pm") H += 12;
+  if (ampm === "ambiguous") H = h < 5 ? h + 12 : h;
+  return `${pad(H)}:${pad(m)}`;
+}
+
+// Pass 1: read every practice in the PDF, independent of who wants what
+function parseAll() {
+  const S = state.settings, all = [], notes = [], groupStarts = {}, dayWarnings = {};
+  let range = null, date = null, dateLine = null, pool = null, poolLine = null, mode = "schedule";
+  const lines = state.lines;
+  for (let i = 0; i < lines.length; i++) {
+    const L = lines[i]; const text = L.text.replace(/\u00a0/g," ").trim();
+    if (!range) { const r = text.match(RE.titleRange); if (r) { const y=+r[5], m1=monthIndex(r[1]), m2=r[3]?monthIndex(r[3]):m1; range = { start:isoDate(y,m1,+r[2]), end:isoDate(y,m2,+r[4]) }; } }
+    if (RE.startDates.test(text)) { mode = "starts"; continue; }
+    if (mode === "starts") {
+      if (RE.stopSection.test(text)) { mode = "other"; continue; }
+      const s = text.match(RE.startLine);
+      if (s) { const mi = monthIndex(s[2]); if (mi < 0) continue; const yr = s[4] ? +s[4] : (range ? +range.start.slice(0,4) : new Date().getFullYear());
+        for (const g of splitGroups(s[1])) groupStarts[normGroup(g)] = isoDate(yr, mi, +s[3]); }
+      continue;
+    }
+    if (mode === "other") continue;
+
+    const d = text.match(RE.date);
+    if (d && monthIndex(d[2]) >= 0) {
+      const mi = monthIndex(d[2]); const yr = d[4] ? +d[4] : (range ? +range.start.slice(0,4) : new Date().getFullYear());
+      date = isoDate(yr, mi, +d[3]); dateLine = L; pool = null; poolLine = null;
+      let w = null;
+      if (!d[4]) w = `Year missing on the day header ("${text}") — assumed ${yr}.`;
+      if (d[1]) { const actual = DAYS[dateFromIso(date).getDay()]; if (actual !== d[1].toUpperCase()) w = `Day header says "${text}" but ${d[2]} ${d[3]}, ${yr} is a ${actual[0]+actual.slice(1).toLowerCase()}. Which is right?`; }
+      if (range && (date < range.start || date > range.end)) w = (w ? w+" " : "") + `This date is outside the week printed in the title (${fmtDate(range.start)} – ${fmtDate(range.end)}).`;
+      if (w) dayWarnings[date] = w;
+      continue;
+    }
+    const p = text.match(RE.pool); if (p) { pool = p[1]; poolLine = L; continue; }
+    if (RE.none.test(text)) continue;
+
+    let s = text.match(RE.slot); if (!s) continue;
+    let usedNext = false;
+    if (!s[7].trim() && lines[i+1] && !RE.slot.test(lines[i+1].text) && !RE.pool.test(lines[i+1].text) && !RE.date.test(lines[i+1].text) && lines[i+1].text.trim().length <= 20) { s[7] = lines[i+1].text.trim(); usedNext = true; }
+
+    const flags = [];
+    if (!date) flags.push({ level:"error", msg:"Found a practice time before any day header — can't tell what date this is." });
+    if (!pool) flags.push({ level:"error", msg:"Found a practice time before any pool header — location unknown." });
+    const end = to24(+s[4], +s[5], s[6], null); let start = to24(+s[1], +s[2], s[3], s[6]);
+    if (!s[3] && !s[6]) flags.push({ level:"warn", msg:"No AM/PM printed on this line — assumed. Check the times." });
+    else if (!s[3] || !s[6]) flags.push({ level:"info", msg:"AM/PM was printed only once on this line; the other side was inferred." });
+    if (start >= end) {
+      const alt = to24(+s[1], +s[2], "am", null);
+      if (alt < end && !s[3]) { start = alt; flags.push({ level:"warn", msg:"Start time was read as AM so it comes before the end time — check." }); }
+      else flags.push({ level:"error", msg:`End time (${fmt12(end)}) is not after start time (${fmt12(start)}).` });
+    }
+    const dur = mins(end) - mins(start);
+    if (dur > 0 && dur < S.minMinutes) flags.push({ level:"warn", msg:`Only ${dur} minutes long — unusually short.` });
+    if (dur > S.maxMinutes) flags.push({ level:"warn", msg:`${Math.round(dur/6)/10} hours long — unusually long. Possible AM/PM typo.` });
+    if (start < S.earliestStart) flags.push({ level:"warn", msg:`Starts at ${fmt12(start)} — earlier than any normal practice. AM/PM typo?` });
+    if (end > S.latestEnd) flags.push({ level:"warn", msg:`Ends at ${fmt12(end)} — later than any normal practice.` });
+    if (date && dayWarnings[date]) flags.push({ level:"warn", msg: dayWarnings[date] });
+    const pi = pool ? normPool(pool) : { pool:null };
+    if (pool && !pi.pool) flags.push({ level:"warn", msg:`Pool "${pool}" isn't one I recognize. Pick the right one (or fix it in Settings).` });
+    else if (pool && !pi.exact) flags.push({ level:"warn", msg:`Pool printed as "${pool}" — matched it to ${pi.pool.name}. Confirm.` });
+    const raws = splitGroups(s[7]);
+    if (!raws.length) flags.push({ level:"error", msg:"No group listed after the time." });
+    for (const rg of raws) {
+      const g = normGroup(rg); const gf = [...flags];
+      if (g !== rg.toUpperCase().replace(/\s/g,"")) gf.push({ level:"warn", msg:`Group printed as "${rg}" — read it as ${g}. Confirm.` });
+      all.push({ id:`pdf-${all.length}`, source:"pdf", group:g, rawGroup:rg, date, start, end, poolName: pi.pool ? pi.pool.name : (pool||""), poolRaw:pool, flags:gf, line:L, poolLine, dateLine, usedNext, include:true });
+    }
+  }
+  for (const r of all) if (r.date && groupStarts[r.group] && r.date < groupStarts[r.group])
+    r.flags.push({ level:"warn", msg:`${r.group} isn't supposed to start until ${fmtDate(groupStarts[r.group])} per the start-date list, but this practice is on ${fmtDate(r.date)}. Wrong group, or wrong day?` });
+
+  const found = {}; for (const r of all) found[r.group] = (found[r.group]||0) + 1;
+  if (!range) notes.push("Couldn't find the week's date range in the title, so I can't check dates against it.");
+  if (!all.length) notes.push("No practice times found at all. Is this the swimmers' schedule PDF? (A scanned/image PDF can't be read here.)");
+  const n0 = lines.filter(l => /^N0\s*PRACT/i.test(l.text)).length; if (n0) notes.push(`${n0} line(s) say "N0 PRACTICES" with a zero instead of an O — treated as "no practices".`);
+  Object.assign(state, { allSlots: all, groupsFound: found, groupStarts, range, notes: [...state.notes, ...notes] });
+}
+
+// Pass 2: apply the user's picks (re-runnable when picks change)
+const labelFor = p => p.name || p.group;
+function applyPicks() {
+  const wanted = new Map(state.picks.map(p => [p.group, p]));
+  const ev = [], notes = [];
+  for (const r of state.allSlots) { r.swimmer = null; r.pick = null; r.include = true; r.change = null; r.flags = r.flags.filter(f => !f.transient); const p = wanted.get(r.group); if (p) { r.pick = p; r.swimmer = labelFor(p); ev.push(r); } }
+  const known = new Set([...Object.keys(state.groupStarts), ...DEFAULTS.knownGroups]);
+  for (const r of state.allSlots) if (!r.pick && !known.has(r.group)) for (const g of wanted.keys())
+    if (r.group !== g && lev(r.group, g) === 1) notes.push(`"${r.rawGroup}" on ${fmtDate(r.date)} at ${r.poolName} ${fmt12(r.start)} looks close to ${g} but I didn't count it. Add it by hand if it's a typo.`);
+  for (const p of state.picks) {
+    const mine = ev.filter(e => e.pick === p).sort((a,b) => (a.date+a.start).localeCompare(b.date+b.start));
+    for (let i=0;i<mine.length;i++) for (let j=i+1;j<mine.length;j++) { const a=mine[i], b=mine[j]; if (a.date!==b.date) continue;
+      if (a.start===b.start && a.end===b.end && a.poolName===b.poolName) { b.include=false; b.flags.push({ level:"warn", transient:true, msg:"Exact duplicate of another line — unchecked so it won't be added twice." }); }
+      else if (b.start < a.end) { const m={ level:"warn", transient:true, msg:`Overlaps another ${labelFor(p)} practice the same day (${fmt12(a.start)}–${fmt12(a.end)} vs ${fmt12(b.start)}–${fmt12(b.end)}). One is probably a typo.` }; a.flags.push(m); b.flags.push(m); } }
+    if (state.range) { const gaps = []; const gs = state.groupStarts[p.group];
+      for (let d=dateFromIso(state.range.start); d<=dateFromIso(state.range.end); d.setDate(d.getDate()+1)) { const iso=isoDate(d.getFullYear(),d.getMonth(),d.getDate()); const dow=d.getDay();
+        if ((!gs || gs<=iso) && dow>=1 && dow<=5 && !mine.some(e=>e.date===iso)) gaps.push(fmtDate(iso)); }
+      if (gaps.length && gaps.length<5) notes.push(`${labelFor(p)} (${p.group}) has no practice listed on ${gaps.join(", ")}. Fine if that's expected — just flagging it.`); }
+    if (!mine.length) notes.push(`No ${p.group} practices found this week${p.name?` for ${p.name}`:""}. Fine if the group hasn't started yet; otherwise add by hand.`);
+  }
+  // Logistics: two different picks overlapping at different pools
+  for (let i=0;i<state.picks.length;i++) for (let j=i+1;j<state.picks.length;j++) {
+    const A = ev.filter(e=>e.pick===state.picks[i]), B = ev.filter(e=>e.pick===state.picks[j]);
+    for (const a of A) for (const b of B) if (a.date===b.date && a.poolName!==b.poolName && a.start<b.end && b.start<a.end) {
+      const m={ level:"info", transient:true, msg:`Logistics: ${a.swimmer} and ${b.swimmer} overlap on ${fmtDate(a.date)} at different pools (${a.poolName} / ${b.poolName}).` }; a.flags.push(m); b.flags.push(m); }
+  }
+  state.events = ev;
+  state.notes = state.notes.filter(n => !n.startsWith("\u200b")).concat(notes.map(n => "\u200b"+n));
+  computeDiff();
+}
+
+/* ============================================================================
+   5. Week-over-week diff (remembered in this browser, per set of picks)
+   ============================================================================ */
+const picksKey = () => state.picks.map(p=>p.group).sort().join(",");
+const evKey = e => `${e.pick.group}|${e.date}|${e.start}|${e.end}|${e.poolName}`;
+function computeDiff() {
+  state.diff = null; for (const e of state.events) e.change = null;
+  const prev = load(LS.last, {})[picksKey()]; if (!prev) return;
+  const now = exportable(); const nowKeys = new Set(now.map(evKey)); const prevKeys = new Set(prev.events.map(e=>e.key));
+  let added = now.filter(e => !prevKeys.has(evKey(e))), removed = prev.events.filter(e => !nowKeys.has(e.key));
+  const changed = [];
+  for (const a of [...added]) { const r = removed.find(x => x.group===a.pick.group && x.date===a.date);
+    if (r) { changed.push({ from:r, to:a }); added = added.filter(x=>x!==a); removed = removed.filter(x=>x!==r); a.change = "chg"; } else a.change = "new"; }
+  state.diff = { prevWeek: prev.week, prevAt: prev.at, added, removed, changed, sameWeek: prev.week === (state.range ? state.range.start : null) };
+}
+function rememberImport() {
+  const mem = load(LS.last, {});
+  mem[picksKey()] = { week: state.range ? state.range.start : null, at: new Date().toISOString(),
+    events: exportable().map(e => ({ key:evKey(e), group:e.pick.group, label:e.swimmer, date:e.date, start:e.start, end:e.end, pool:e.poolName })) };
+  save(LS.last, mem);
+}
+
+/* ============================================================================
+   6. Evidence screenshots
+   ============================================================================ */
+async function renderPage(idx) { const P = state.pages[idx]; if (P.canvas) return P; const c = document.createElement("canvas"); c.width=P.viewport.width; c.height=P.viewport.height; await P.page.render({ canvasContext:c.getContext("2d"), viewport:P.viewport }).promise; P.canvas=c; return P; }
+async function cropFor(ev, target) {
+  const P = await renderPage(ev.line.pageIdx); const vp = P.viewport;
+  const yTop = (ev.poolLine && ev.poolLine.pageIdx===ev.line.pageIdx) ? ev.poolLine.y + ev.poolLine.height + 8 : ev.line.y + ev.line.height + 8;
+  const yBot = ev.line.y - 6 - (ev.usedNext ? 14 : 0);
+  const top = vp.convertToViewportPoint(0, yTop)[1], bot = vp.convertToViewportPoint(0, yBot)[1];
+  const hlTop = vp.convertToViewportPoint(0, ev.line.y + ev.line.height + 3)[1], hlBot = vp.convertToViewportPoint(0, ev.line.y - 3)[1];
+  const x0 = Math.max(0, vp.convertToViewportPoint(ev.line.x, 0)[0] - 30); const w = Math.min(P.canvas.width - x0, 760); const h = Math.max(30, bot - top);
+  target.width=w; target.height=h; const ctx = target.getContext("2d");
+  ctx.drawImage(P.canvas, x0, top, w, h, 0, 0, w, h);
+  ctx.fillStyle="rgba(31,184,201,.22)"; ctx.fillRect(0, hlTop-top, w, hlBot-hlTop);
+  ctx.strokeStyle="#1FB8C9"; ctx.lineWidth=3; ctx.strokeRect(1.5, hlTop-top, w-3, hlBot-hlTop);
+}
+
+/* ============================================================================
+   7. UI
+   ============================================================================ */
+const $ = s => document.querySelector(s);
+const el = (tag, attrs={}, ...kids) => { const e=document.createElement(tag); for (const [k,v] of Object.entries(attrs)) { if (k==="class") e.className=v; else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else if (v!==false && v!=null) e.setAttribute(k, v===true?"":v); } for (const k of kids.flat()) if (k!=null) e.append(k.nodeType? k : document.createTextNode(k)); return e; };
+function toast(msg) { const t = el("div", {class:"toast"}, msg); document.body.append(t); setTimeout(()=>t.remove(), 2200); }
+function setStep(n) { document.querySelectorAll(".step").forEach(s => { const k=+s.dataset.step; s.classList.toggle("active", k===n); s.classList.toggle("done", k<n); }); }
+
+// ---- Step 2: group picker
+function renderPicker() {
+  const box = $("#groups"); box.innerHTML = "";
+  const groups = new Set([...Object.keys(state.groupsFound), ...Object.keys(state.groupStarts), ...DEFAULTS.knownGroups, ...state.picks.map(p=>p.group)]);
+  const order = [...groups].sort((a,b) => (state.groupsFound[b]||0)-(state.groupsFound[a]||0) || a.localeCompare(b));
+  for (const g of order) {
+    const pick = state.picks.find(p=>p.group===g); const n = state.groupsFound[g]||0;
+    const card = el("div", { class:`g${pick?" on":""}${n?"":" absent"}` });
+    const cb = el("input", { type:"checkbox", checked: !!pick, "aria-label":`Include ${g}`, onchange: e => { if (e.target.checked) state.picks.push({ group:g, name:"" }); else state.picks = state.picks.filter(p=>p.group!==g); persistPicks(); renderPicker(); } });
+    const who = el("input", { type:"text", class:"who", placeholder:"Who's this for? (optional)", value: pick ? pick.name : "", disabled: !pick, oninput: e => { const p = state.picks.find(p=>p.group===g); if (p) { p.name = e.target.value; persistPicks(); } } });
+    card.append(cb, el("div", {}, el("span", {class:"code"}, g), " ", el("span", {class:"cnt"}, n ? `${n} this week` : (state.groupStarts[g] ? `starts ${fmtDate(state.groupStarts[g])}` : "not in this PDF"))), who);
+    box.append(card);
+  }
+  $("#pickerMeta").textContent = `${state.allSlots.length} practices found across ${Object.keys(state.groupsFound).length} groups`;
+  $("#continueBtn").disabled = !state.picks.length;
+  $("#picker").classList.remove("hidden"); $("#results").classList.add("hidden"); setStep(2);
+}
+function persistPicks() { save(LS.picks, state.picks); history.replaceState(null, "", location.pathname + location.search + hashFromPicks(state.picks)); $("#continueBtn").disabled = !state.picks.length; }
+
+// ---- Step 3: review
+function poolSelect(ev) {
+  const sel = el("select", { onchange: e => { ev.poolName = e.target.value==="__other" ? "" : e.target.value; other.classList.toggle("hidden", e.target.value!=="__other"); if (e.target.value==="__other") other.focus(); refresh(); } });
+  for (const p of state.pools) sel.append(el("option", { value:p.name, selected:p.name===ev.poolName }, p.name));
+  const known = state.pools.some(p=>p.name===ev.poolName);
+  sel.append(el("option", { value:"__other", selected:!known }, "Other / type it in…"));
+  const other = el("input", { type:"text", class: known?"hidden":"", placeholder:"Pool name", value: known?"":ev.poolName, oninput: e => { ev.poolName = e.target.value; refresh(); } });
+  return el("div", {class:"f wide"}, el("label", {}, "Pool"), sel, other);
+}
+function rowFor(ev) {
+  const hasErr = ev.flags.some(f=>f.level==="error"), hasWarn = ev.flags.some(f=>f.level==="warn");
+  const row = el("div", { class:`row${hasErr?" has-error":hasWarn?" has-warn":""}${ev.include?"":" excluded"}` });
+  const badge = ev.change==="new" ? el("span",{class:"badge new"},"new since last import") : ev.change==="chg" ? el("span",{class:"badge chg"},"changed since last import") : null;
+  const evidence = el("div", {class:"evidence"});
+  if (ev.source==="pdf") {
+    evidence.append(el("p", {class:"cap"}, el("span", {}, `From the PDF · ${ev.dateLine ? ev.dateLine.text : "date unknown"}`), badge));
+    const cv = el("canvas"); evidence.append(cv); cropFor(ev, cv);
+    evidence.append(el("p", {class:"raw"}, `"${ev.line.text}"${ev.usedNext?" (group name was on the next line)":""}`));
+  } else {
+    evidence.append(el("p", {class:"cap"}, el("span",{},"Added by hand"), badge));
+    evidence.append(el("div", {class:"manual"}, "Not in the PDF — you're adding this one yourself."));
+  }
+  const imp = el("div", {class:"import"});
+  const forSel = el("select", { onchange: e => { const p = state.picks[+e.target.value]; ev.pick = p; ev.swimmer = labelFor(p); ev.group = p.group; render(); } });
+  state.picks.forEach((p,i) => forSel.append(el("option", { value:i, selected: p===ev.pick }, labelFor(p))));
+  imp.append(el("div", {class:"fields"},
+    el("div", {class:"f"}, el("label", {}, "For"), forSel),
+    el("div", {class:"f"}, el("label", {}, "Group"), el("input", { type:"text", class:"mono", value:ev.group, oninput:e=>{ ev.group=e.target.value.toUpperCase(); refresh(); } })),
+    el("div", {class:"f wide"}, el("label", {}, "Date"), el("input", { type:"date", value:ev.date||"", required:true, oninput:e=>{ ev.date=e.target.value; refresh(); } })),
+    el("div", {class:"f"}, el("label", {}, "Start"), el("input", { type:"time", value:ev.start, required:true, oninput:e=>{ ev.start=e.target.value; refresh(); } })),
+    el("div", {class:"f"}, el("label", {}, "End"), el("input", { type:"time", value:ev.end, required:true, oninput:e=>{ ev.end=e.target.value; refresh(); } })),
+    poolSelect(ev)));
+  imp.append(el("div", {class:"preview", "data-preview":ev.id}, previewText(ev)));
+  if (ev.flags.length) imp.append(el("ul", {class:"flags"}, ev.flags.map(f => el("li", {class:f.level}, f.msg))));
+  imp.append(el("div", {class:"row-actions"},
+    el("label", {class:"inc"}, el("input", { type:"checkbox", checked:ev.include, onchange:e=>{ ev.include=e.target.checked; row.classList.toggle("excluded", !ev.include); refresh(); } }), "Add this to the calendar"),
+    el("button", {class:"btn danger", type:"button", onclick:()=>{ state.events = state.events.filter(x=>x!==ev); render(); }}, "Remove")));
+  row.append(evidence, el("div", {class:"lane"}), imp);
+  return row;
+}
+function title(ev) { return state.settings.titleTemplate.replace("{name}", ev.swimmer||ev.group).replace("{group}", ev.group).replace("{pool}", ev.poolName); }
+function previewText(ev) {
+  const p = state.pools.find(x=>x.name===ev.poolName);
+  return el("span", {}, el("b", {}, title(ev)), " · ", el("span", {class:"when"}, `${ev.date?fmtDate(ev.date):"(no date)"}, ${fmt12(ev.start)} – ${fmt12(ev.end)}`), " · ", ev.poolName||"(no pool)", p ? "" : (ev.poolName ? " (no address on file)" : ""));
+}
+const validEvent = e => e.date && e.start && e.end && e.start < e.end && e.pick;
+const exportable = () => state.events.filter(e => e.include && validEvent(e));
+function refresh() {
+  for (const ev of state.events) { const pv = document.querySelector(`[data-preview="${ev.id}"]`); if (pv) { pv.innerHTML=""; pv.append(previewText(ev)); } }
+  const ready = exportable();
+  $("#count").textContent = ready.length; $("#countLabel").textContent = ready.length===1 ? "practice will be added" : "practices will be added";
+  const bad = state.events.filter(e=>e.include && !validEvent(e)).length;
+  $("#warnnote").textContent = bad ? `${bad} checked ${bad===1?"practice is":"practices are"} incomplete (missing date/time or end before start) and will be skipped.` : "";
+  $("#downloadBtn").disabled = !ready.length;
+  const ch = ready.filter(e=>e.change); $("#changedBtn").classList.toggle("hidden", !state.diff || !ch.length); $("#changedBtn").textContent = `Download changes only (${ch.length})`;
+}
+function render() {
+  const secs = $("#sections"); secs.innerHTML = "";
+  for (const p of state.picks) {
+    const mine = state.events.filter(e=>e.pick===p).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
+    const sec = el("section", {class:"card"});
+    sec.append(el("div", {class:"card-head"}, el("h2", {}, labelFor(p), el("span", {class:"grp"}, p.group)),
+      el("div", {}, el("span", {class:"muted"}, `${mine.length} found `), el("button", {class:"btn", type:"button", onclick:()=>{ state.events.push({ id:`manual-${++state.manualSeq}`, source:"manual", pick:p, swimmer:labelFor(p), group:p.group, date: state.range?state.range.start:"", start:"16:00", end:"17:30", poolName:state.pools[0].name, flags:[], include:true, change: state.diff ? "new" : null }); render(); }}, "+ Add a practice by hand"))));
+    if (!mine.length) sec.append(el("div", {class:"empty"}, `Nothing found for ${p.group}. Check the full list below, or add one by hand.`));
+    for (const ev of mine) sec.append(rowFor(ev));
+    secs.append(sec);
+  }
+  const D = state.diff; $("#diffCard").classList.toggle("hidden", !D);
+  if (D) {
+    $("#diffMeta").textContent = D.sameWeek ? `Same week, re-imported — compared with your import on ${new Date(D.prevAt).toLocaleString()}` : `Compared with the week of ${D.prevWeek?fmtDate(D.prevWeek):"?"} (imported ${new Date(D.prevAt).toLocaleDateString()})`;
+    const li = e => el("li", {}, `${e.label||e.swimmer} · ${fmtDate(e.date)} ${fmt12(e.start)}–${fmt12(e.end)} · ${e.pool||e.poolName}`);
+    const box = $("#diff"); box.innerHTML = "";
+    box.append(
+      el("div", {class:"add"}, el("h4", {}, `New (${D.added.length})`), D.added.length ? el("ul", {}, D.added.map(li)) : el("div", {class:"none"}, "Nothing new")),
+      el("div", {class:"chg"}, el("h4", {}, `Changed (${D.changed.length})`), D.changed.length ? el("ul", {}, D.changed.map(c => el("li", {}, `${c.to.swimmer} · ${fmtDate(c.to.date)}: ${fmt12(c.from.start)}–${fmt12(c.from.end)} ${c.from.pool} → ${fmt12(c.to.start)}–${fmt12(c.to.end)} ${c.to.poolName}`))) : el("div", {class:"none"}, "No changes")),
+      el("div", {class:"rem"}, el("h4", {}, `Gone (${D.removed.length})`), D.removed.length ? el("ul", {}, D.removed.map(li)) : el("div", {class:"none"}, "Nothing dropped")));
+    $("#diffNote").textContent = D.sameWeek
+      ? "Anything under Gone or with a changed time is still on your calendar from the earlier import — delete those by hand. Re-importing updates everything else."
+      : "A new week naturally shows everything as new. This comparison is most useful when a revised schedule for the same week comes out.";
+  }
+  const notes = $("#notes"); notes.innerHTML = "";
+  const list = state.notes.map(n => n.replace(/^\u200b/, ""));
+  notes.append(list.length ? el("ul", {}, list.map(n=>el("li", {}, n))) : el("p", {}, "Nothing unusual spotted outside the rows above."));
+  const tbl = el("table", {class:"alltable"}, el("tr", {}, ["Date","Time","Group","Pool"].map(h=>el("th",{},h))));
+  for (const s of [...state.allSlots].sort((a,b)=>((a.date||"")+a.start).localeCompare((b.date||"")+b.start)))
+    tbl.append(el("tr", {class: s.pick?"mine":""}, el("td",{class:"t"}, s.date?fmtDate(s.date):"?"), el("td",{class:"t"}, `${fmt12(s.start)}–${fmt12(s.end)}`), el("td",{class:"t"}, s.rawGroup), el("td",{}, s.poolRaw||"?")));
+  notes.append(el("details", {}, el("summary", {}, `Every practice found in the PDF (${state.allSlots.length}) — useful if a group was mislabeled`), tbl));
+  $("#picker").classList.add("hidden"); $("#results").classList.remove("hidden"); setStep(3); refresh();
+}
+
+/* ============================================================================
+   8. ICS export + text copy
+   ============================================================================ */
+const icsEscape = s => String(s).replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n");
+const fold = line => { const out=[]; let s=line; while (s.length>73) { out.push(s.slice(0,73)); s=" "+s.slice(73); } out.push(s); return out; };
+function uidFor(e) { let h=0; for (const ch of `${e.pick.group}|${e.swimmer}|${e.date}|${e.start}|${e.end}`) h=(h*31+ch.charCodeAt(0))>>>0; return `${h.toString(16)}-${e.date}-${e.start.replace(":","")}@nbac`; }
+function buildIcs(events) {
+  const S = state.settings, TZ = S.timezone; const stamp = new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+Z$/,"Z");
+  const L = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//nbac-schedule.html//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH",`X-WR-CALNAME:${icsEscape(S.calendarName)}`,`X-WR-TIMEZONE:${TZ}`,
+    "BEGIN:VTIMEZONE",`TZID:${TZ}`,"BEGIN:DAYLIGHT","TZOFFSETFROM:-0500","TZOFFSETTO:-0400","TZNAME:EDT","DTSTART:19700308T020000","RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU","END:DAYLIGHT",
+    "BEGIN:STANDARD","TZOFFSETFROM:-0400","TZOFFSETTO:-0500","TZNAME:EST","DTSTART:19701101T020000","RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU","END:STANDARD","END:VTIMEZONE"];
+  for (const e of events) {
+    const d = e.date.replace(/-/g,""); const p = state.pools.find(x=>x.name===e.poolName);
+    L.push("BEGIN:VEVENT", `UID:${uidFor(e)}`, `DTSTAMP:${stamp}`, `DTSTART;TZID=${TZ}:${d}T${e.start.replace(":","")}00`, `DTEND;TZID=${TZ}:${d}T${e.end.replace(":","")}00`,
+      `SUMMARY:${icsEscape(title(e))}`, `LOCATION:${icsEscape(p ? p.address : e.poolName)}`,
+      `DESCRIPTION:${icsEscape(`NBAC ${e.group} @ ${e.poolName}${e.source==="pdf"?`\nFrom PDF line: ${e.line.text}`:"\nAdded by hand"}\nImported ${new Date().toLocaleDateString()}`)}`);
+    if (+S.alarmMinutes) L.push("BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:Leave for swim practice",`TRIGGER:-PT${+S.alarmMinutes}M`,"END:VALARM");
+    if (S.pickupAlarm) L.push("BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:Pick-up soon","TRIGGER;RELATED=END:-PT15M","END:VALARM");
+    L.push("END:VEVENT");
+  }
+  L.push("END:VCALENDAR"); return L.flatMap(fold).join("\r\n") + "\r\n";
+}
+// What to do with the .ics, phrased for whatever device the parent is holding
+function calendarHint() {
+  const ua = navigator.userAgent;
+  if (/iPhone|iPad/.test(ua)) return "On iPhone/iPad: tap the ⬇ download button in Safari's address bar, tap the file, then \"Add All\" to put every practice in Calendar.";
+  if (/Android/.test(ua)) return "On Android: the Google Calendar app can't open .ics files — go to calendar.google.com → Settings → Import & export and import the downloaded file there.";
+  if (/Mac/.test(ua)) return "Open the downloaded file — Calendar will ask which calendar to add the practices to. (Google Calendar users: import it at calendar.google.com → Settings → Import.)";
+  return "Open the downloaded file — Outlook or your calendar app will offer to import the practices. (Google Calendar: import it at calendar.google.com → Settings → Import.)";
+}
+function download(evs, suffix="") {
+  if (!evs.length) return;
+  const blob = new Blob([buildIcs(evs)], { type:"text/calendar;charset=utf-8" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = `NBAC-${state.range ? state.range.start : evs[0].date}-${state.picks.map(labelFor).join("-").replace(/[^\w-]+/g,"_")}${suffix}.ics`; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+  rememberImport(); setStep(4);
+  $(".exportbar .hint").textContent = `Downloaded. ${calendarHint()} Re-importing the same week later updates matching events rather than duplicating them; dropped practices must be deleted by hand.`;
+}
+$("#downloadBtn").addEventListener("click", () => download(exportable()));
+$("#changedBtn").addEventListener("click", () => download(exportable().filter(e=>e.change), "-changes"));
+$("#copyBtn").addEventListener("click", async () => {
+  const txt = exportable().map(e => `${fmtDate(e.date)}  ${fmt12(e.start)}–${fmt12(e.end)}  ${title(e)} @ ${e.poolName}`).join("\n");
+  try { await navigator.clipboard.writeText(txt); toast("Copied"); } catch { prompt("Copy this:", txt); }
+});
+
+/* ============================================================================
+   9. Settings drawer + share
+   ============================================================================ */
+function openDrawer() {
+  const F = $("#settingsForm"); F.innerHTML = ""; const S = state.settings;
+  const field = (key, label, type="text", extra={}) => F.append(el("div", {class:"f"}, el("label", {}, label), el("input", Object.assign({ type, value:S[key], oninput:e=>{ S[key] = type==="number" ? +e.target.value : e.target.value; save(LS.settings, S); } }, extra))));
+  field("calendarName", "Calendar name"); field("titleTemplate", "Event title ({name}, {group}, {pool})");
+  field("alarmMinutes", "Leave-for-practice alert (minutes before, 0 = none)", "number", { min:0 });
+  F.append(el("div", {class:"f"}, el("label", {}, "Pick-up alert 15 min before the end"), el("select", { onchange:e=>{ S.pickupAlarm = e.target.value==="1"; save(LS.settings, S); } }, el("option", {value:"0", selected:!S.pickupAlarm}, "Off"), el("option", {value:"1", selected:!!S.pickupAlarm}, "On"))));
+  field("earliestStart", "Flag starts before", "time"); field("latestEnd", "Flag ends after", "time");
+  field("minMinutes", "Flag shorter than (min)", "number"); field("maxMinutes", "Flag longer than (min)", "number");
+  const PE = $("#poolsEdit"); PE.innerHTML = ""; PE.append(el("div", {}, el("b",{},"Pool")), el("div", {}, el("b",{},"Address")));
+  for (const p of state.pools) PE.append(el("div", {}, p.name), el("input", { type:"text", value:p.address, oninput:e=>{ p.address=e.target.value; save(LS.pools, state.pools); } }));
+  $("#shareUrl").value = shareUrl();
+  const k = Object.keys(load(LS.last, {})).length;
+  $("#memoryInfo").textContent = k ? `Remembering ${k} previous import${k>1?"s":""} for week-over-week comparison.` : "No previous imports remembered yet.";
+  $("#drawer").classList.remove("hidden");
+}
+$("#settingsBtn").addEventListener("click", openDrawer);
+$("#closeDrawer").addEventListener("click", () => { $("#drawer").classList.add("hidden"); if (state.events.length && !$("#results").classList.contains("hidden")) render(); });
+$("#drawer").addEventListener("click", e => { if (e.target===$("#drawer")) $("#closeDrawer").click(); });
+$("#resetSettings").addEventListener("click", () => { state.settings = clone(DEFAULTS.settings); state.pools = clone(DEFAULTS.pools); save(LS.settings, state.settings); save(LS.pools, state.pools); openDrawer(); toast("Settings reset"); });
+$("#forgetBtn").addEventListener("click", () => { localStorage.removeItem(LS.last); localStorage.removeItem(LS.picks); state.picks=[]; history.replaceState(null,"",location.pathname+location.search); openDrawer(); toast("Forgotten"); });
+$("#copyShare").addEventListener("click", async () => { try { await navigator.clipboard.writeText($("#shareUrl").value); toast("Link copied"); } catch { $("#shareUrl").select(); } });
+$("#shareBtn").addEventListener("click", async () => { if (!state.picks.length) { toast("Pick some groups first"); return; } try { await navigator.clipboard.writeText(shareUrl()); toast("Link copied — it remembers your groups"); } catch { openDrawer(); } });
+$("#changeGroups").addEventListener("click", () => { renderPicker(); $("#picker").scrollIntoView({ behavior:"smooth", block:"start" }); });
+
+/* ============================================================================
+   10. Drag & drop + flow
+   ============================================================================ */
+const drop = $("#drop"), status = $("#status");
+["dragenter","dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => handleFiles(e.dataTransfer.files));
+$("#browseBtn").addEventListener("click", () => $("#fileInput").click());
+$("#fileInput").addEventListener("change", e => { handleFiles(e.target.files); e.target.value=""; });
+document.addEventListener("dragover", e => e.preventDefault()); document.addEventListener("drop", e => e.preventDefault());
+$("#continueBtn").addEventListener("click", () => { applyPicks(); render(); $("#results").scrollIntoView({ behavior:"smooth", block:"start" }); });
+
+async function handleFiles(files) {
+  const pdfs = [...files].filter(f => /\.pdf$/i.test(f.name) || f.type==="application/pdf");
+  if (!pdfs.length) { status.textContent = "That wasn't a PDF."; return; }
+  Object.assign(state, { pages:[], lines:[], events:[], allSlots:[], notes:[], fileHashes:new Set(), range:null, diff:null });
+  $("#results").classList.add("hidden"); $("#picker").classList.add("hidden");
+  drop.classList.add("busy"); status.textContent = "Reading…";
+  try {
+    for (const f of pdfs) { status.textContent = `Reading ${f.name}…`; await loadPdf(f); }
+    parseAll();
+    status.textContent = `Read ${pdfs.length} file${pdfs.length>1?"s":""} · ${state.allSlots.length} practices found${state.range?` · week of ${fmtDate(state.range.start)}`:""}.`;
+    drop.classList.add("compact"); drop.querySelector("h2").textContent = "Drop a different PDF";
+    if (state.picks.length) { applyPicks(); render(); }   // picks known (share link or this browser's memory) → straight to review
+    else renderPicker();
+    (state.picks.length ? $("#results") : $("#picker")).scrollIntoView({ behavior:"smooth", block:"start" });
+  } catch (err) { console.error(err); status.textContent = `Couldn't read that PDF: ${err.message}`; }
+  finally { drop.classList.remove("busy"); }
+}
+
+// Boot: picks come from the link if present, else from this browser's memory
+const fromLink = picksFromHash();
+state.picks = fromLink || load(LS.picks, []); state.fromLink = !!fromLink;
+if (state.picks.length) status.textContent = `Ready for ${state.picks.map(labelFor).join(" & ")} (${state.picks.map(p=>p.group).join(", ")}). Drop this week's PDF.`;
+
+// Offline: after the first visit, the page and the PDF reader library work with no internet
+if ("serviceWorker" in navigator && location.protocol.startsWith("http"))
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>
