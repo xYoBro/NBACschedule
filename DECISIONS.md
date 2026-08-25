@@ -2,6 +2,7 @@
 
 Index: D1 single-file HTML app replaces Python pipeline · D2 share-link-as-config, no
 config file · D3 GitHub Pages + service worker · D4 .ics download, no subscription feed
+· D5 one adaptive download button, no per-service button row
 
 ---
 
@@ -29,4 +30,16 @@ internet.
 **D4 (2026-08-24) — Calendar delivery stays a downloaded .ics, not a subscription
 (webcal) feed.** A feed would auto-update and auto-delete events — strictly better UX —
 but requires a server holding every family's schedule, which this project deliberately
-does not have. Revisit only if a backend ever becomes acceptable.
+does not have. Revisit only if a backend ever becomes acceptable. If revisited, the
+best shape is per-GROUP feeds (no personal data server-side): one maintainer drops the
+weekly PDF and publishes; every other family subscribes via webcal once and never
+touches the app again.
+
+**D5 (2026-08-24) — One adaptive download button, not an Apple/Outlook/Google button
+row.** Direct insertion is impossible: no web API exists for Apple Calendar or bulk
+Outlook import, and Google/Outlook URL schemes take one event per click — so every
+"add to calendar" button any site shows is the same .ics with different labeling.
+Given that, per-service buttons only add a choice the device can make itself: the UA
+picks the label ("Download for Apple Calendar" on Mac/iOS, "for Outlook" on Windows)
+and the post-download instructions, with a Google import link where relevant. The
+`PLATFORM` object in index.html §8 is the single seam if buttons are ever wanted.

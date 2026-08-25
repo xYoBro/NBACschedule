@@ -140,6 +140,7 @@
   .exportbar .btn{background:transparent;color:#fff;border-color:rgba(255,255,255,.3)} .exportbar .btn:hover{border-color:var(--aqua);color:var(--aqua)}
   .exportbar .btn.primary{background:var(--aqua);border-color:var(--aqua);color:var(--pool-deep)} .exportbar .btn.primary:hover{background:#38CBDB}
   .exportbar .hint{font-size:12px;color:#B9CFDD;width:100%}
+  .exportbar .hint a{color:var(--aqua)}
 
   @media (max-width:760px){
     .row{grid-template-columns:1fr}
@@ -648,14 +649,24 @@ function buildIcs(events) {
   }
   L.push("END:VCALENDAR"); return L.flatMap(fold).join("\r\n") + "\r\n";
 }
-// What to do with the .ics, phrased for whatever device the parent is holding
-function calendarHint() {
+// One adaptive button beats an Apple/Outlook/Google button row: the device already
+// says which calendar its owner uses, so detect it — don't ask. There is no web API
+// that inserts events directly into Apple Calendar or Outlook; every path is the
+// same .ics file, so only the label and the "what happens next" line differ.
+const GCAL_IMPORT = '<a href="https://calendar.google.com/calendar/u/0/r/settings/export" target="_blank" rel="noopener">calendar.google.com → Import</a>';
+const PLATFORM = (() => {
   const ua = navigator.userAgent;
-  if (/iPhone|iPad/.test(ua)) return "On iPhone/iPad: tap the ⬇ download button in Safari's address bar, tap the file, then \"Add All\" to put every practice in Calendar.";
-  if (/Android/.test(ua)) return "On Android: the Google Calendar app can't open .ics files — go to calendar.google.com → Settings → Import & export and import the downloaded file there.";
-  if (/Mac/.test(ua)) return "Open the downloaded file — Calendar will ask which calendar to add the practices to. (Google Calendar users: import it at calendar.google.com → Settings → Import.)";
-  return "Open the downloaded file — Outlook or your calendar app will offer to import the practices. (Google Calendar: import it at calendar.google.com → Settings → Import.)";
-}
+  if (/iPhone|iPad/.test(ua)) return { label:"Download for Apple Calendar",
+    hint:`Tap the ⬇ button in Safari's address bar, tap the file, then "Add All" — every practice lands in Calendar.` };
+  if (/Android/.test(ua)) return { label:"Download calendar file (.ics)",
+    hint:`The Google Calendar app can't open .ics files — import the downloaded file at ${GCAL_IMPORT}.` };
+  if (/Mac/.test(ua)) return { label:"Download for Apple Calendar",
+    hint:`Open the downloaded file — Calendar asks which calendar to add the practices to. (Google Calendar users: import it at ${GCAL_IMPORT}.)` };
+  if (/Windows/.test(ua)) return { label:"Download for Outlook",
+    hint:`Open the downloaded file — Outlook offers to import every practice. (Google Calendar users: import it at ${GCAL_IMPORT}.)` };
+  return { label:"Download calendar file (.ics)",
+    hint:"Open the downloaded file — your calendar app will offer to import the practices." };
+})();
 function download(evs, suffix="") {
   if (!evs.length) return;
   const blob = new Blob([buildIcs(evs)], { type:"text/calendar;charset=utf-8" });
@@ -663,8 +674,9 @@ function download(evs, suffix="") {
   a.download = `NBAC-${state.range ? state.range.start : evs[0].date}-${state.picks.map(labelFor).join("-").replace(/[^\w-]+/g,"_")}${suffix}.ics`; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
   rememberImport(); setStep(4);
-  $(".exportbar .hint").textContent = `Downloaded. ${calendarHint()} Re-importing the same week later updates matching events rather than duplicating them; dropped practices must be deleted by hand.`;
+  $(".exportbar .hint").innerHTML = `Downloaded. ${PLATFORM.hint} Re-importing the same week later updates matching events rather than duplicating them; dropped practices must be deleted by hand.`;
 }
+$("#downloadBtn").textContent = PLATFORM.label;
 $("#downloadBtn").addEventListener("click", () => download(exportable()));
 $("#changedBtn").addEventListener("click", () => download(exportable().filter(e=>e.change), "-changes"));
 $("#copyBtn").addEventListener("click", async () => {
