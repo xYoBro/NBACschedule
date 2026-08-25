@@ -43,3 +43,8 @@ Given that, per-service buttons only add a choice the device can make itself: th
 picks the label ("Download for Apple Calendar" on Mac/iOS, "for Outlook" on Windows)
 and the post-download instructions, with a Google import link where relevant. The
 `PLATFORM` object in index.html §8 is the single seam if buttons are ever wanted.
+*Amendment (2026-08-24):* an iOS one-tap experiment (window.open on the blob so
+QuickLook shows "Add All" instead of saving) was shipped and reverted the same day —
+user testing still got a download, and the owner ruled the extra code fork not worth
+it. Every platform uses the same plain download; don't retry the handoff trick
+without a device-verified proof first.

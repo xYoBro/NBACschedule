@@ -656,7 +656,8 @@ function buildIcs(events) {
 const GCAL_IMPORT = '<a href="https://calendar.google.com/calendar/u/0/r/settings/export" target="_blank" rel="noopener">calendar.google.com → Import</a>';
 const PLATFORM = (() => {
   const ua = navigator.userAgent;
-  if (/iPhone|iPad/.test(ua)) return { ios:true, label:"Add to Apple Calendar" };   // hint is built in download()
+  if (/iPhone|iPad/.test(ua)) return { label:"Download for Apple Calendar",
+    hint:`Tap the ⬇ button in Safari's address bar, tap the file, then "Add All" — every practice lands in Calendar.` };
   if (/Android/.test(ua)) return { label:"Download calendar file (.ics)",
     hint:`The Google Calendar app can't open .ics files — import the downloaded file at ${GCAL_IMPORT}.` };
   if (/Mac/.test(ua)) return { label:"Download for Apple Calendar",
@@ -669,21 +670,11 @@ const PLATFORM = (() => {
 function download(evs, suffix="") {
   if (!evs.length) return;
   const blob = new Blob([buildIcs(evs)], { type:"text/calendar;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const fname = `NBAC-${state.range ? state.range.start : evs[0].date}-${state.picks.map(labelFor).join("-").replace(/[^\w-]+/g,"_")}${suffix}.ics`;
-  let hint;
-  if (PLATFORM.ios) {
-    // Hand the file straight to iOS instead of saving it: Safari QuickLook-previews
-    // a text/calendar blob with a native "Add All" button — one tap into Calendar.
-    window.open(url, "_blank");
-    hint = `A preview should have opened — tap "Add All" to put the practices in Calendar. If nothing opened, <a href="${url}" download="${fname}">download the file</a> and tap it in Safari's ⬇ downloads menu.`;
-  } else {
-    const a = document.createElement("a"); a.href = url; a.download = fname; a.click();
-    hint = `Downloaded. ${PLATFORM.hint}`;
-  }
-  setTimeout(() => URL.revokeObjectURL(url), 300000);   // keep the fallback link alive for 5 min
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = `NBAC-${state.range ? state.range.start : evs[0].date}-${state.picks.map(labelFor).join("-").replace(/[^\w-]+/g,"_")}${suffix}.ics`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   rememberImport(); setStep(4);
-  $(".exportbar .hint").innerHTML = `${hint} Re-importing the same week later updates matching events rather than duplicating them; dropped practices must be deleted by hand.`;
+  $(".exportbar .hint").innerHTML = `Downloaded. ${PLATFORM.hint} Re-importing the same week later updates matching events rather than duplicating them; dropped practices must be deleted by hand.`;
 }
 $("#downloadBtn").textContent = PLATFORM.label;
 $("#downloadBtn").addEventListener("click", () => download(exportable()));
